@@ -1,8 +1,6 @@
 use std::collections::HashSet;
 use core::hash::Hash;
 
-type BlockId = u32;
-
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Node<T: Eq + Hash + PartialEq> {
     id: T,
