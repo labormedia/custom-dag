@@ -33,7 +33,7 @@ impl<T: Eq + Hash + PartialEq + Copy> Node<T> {
 #[derive(Debug, Clone)]
 pub struct Dag<T: Eq + Hash + PartialEq + Copy> {
     nodes: HashMap<T, Node<T>>,
-    collitions: HashMap<T, Vec<Node<T>>>
+    pub collitions: HashMap<T, Vec<Node<T>>>
 }
 
 impl<T: Eq + Hash + PartialEq + Copy + Debug> Dag<T> {
@@ -48,9 +48,18 @@ impl<T: Eq + Hash + PartialEq + Copy + Debug> Dag<T> {
     // If the id is not present in the dag, the node is inserted and None is returned.
     // If the id is present, it does not update the dag. Instead it returns the value that was present before and accumulates the collition.
     pub fn insert(&mut self, node: Node<T>) -> Option<&Node<T>> {
-        let id = &node.id;
-        if self.nodes.contains_key(id) {
-            self.nodes.get(id)
+        let id = node.id.clone();
+        if self.nodes.contains_key(&id) {
+            match self.collitions.get_mut(&id) {
+                Some(collition_list) => { 
+                    collition_list.push(node);
+                },
+                None => {
+                    let mut collition_list = vec![node];
+                    assert_eq!(self.collitions.insert(id, vec![node]), None);
+                },
+            };
+            self.nodes.get(&id)
         } else {
             assert_eq!(self.nodes.insert(node.id, node), None);
             None
