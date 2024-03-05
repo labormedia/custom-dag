@@ -31,10 +31,14 @@ fn insert_existing_node_id_does_not_update() {
     let nodeA = Node::new(id,Some(3),Some(5));
     let nodeB = Node::new(id,Some(42),Some(43));
     let mut dag = Dag::new();
+    // Nodes are considered equal by id under the Node<T> type, but they can contain different field values (other than id).
     assert_eq!(nodeA, nodeB);
-    assert_eq!(nodeA.id, nodeB.id);
+    assert_ne!(nodeA.left, nodeB.left);
+    // The new node was not present in the dag when inserted.
     assert_eq!(dag.insert(nodeA), None);
-    let insert_result = dag.insert(nodeB).unwrap();
+    // When trying to insert a new Node<T> with the same id, it will return the present node and will deflect the insertion to the collition collection.
+    // The returned value of this action is the node already prensent, with the same id.
+    let insert_result = dag.insert(nodeB).expect("Wrond type assumption.");
     assert_eq!(insert_result, &nodeA);
     assert_eq!(insert_result.left, Some(3));
     assert_eq!(insert_result.right, Some(5));
