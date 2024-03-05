@@ -11,4 +11,38 @@ fn create_1_000_000_random_nodes_unconnected_DAG() {
     for i in 0..1_000_000 {
        dag.insert(Node::new(i, None, None));
     }
+    for i in 0..1_000_000 {
+        assert!(dag.contains_id(&i));
+    }
+}
+
+#[test]
+fn insert_existing_node_id_does_not_update() {
+    let id = 0;
+    let nodeA = Node::new(id,Some(3),Some(5));
+    let nodeB = Node::new(id,Some(42),Some(42));
+    let mut dag = Dag::new();
+    assert_eq!(nodeA.id, nodeB.id);
+    assert_eq!(dag.insert(nodeA), None);
+    let insert_result = dag.insert(nodeB).unwrap();
+    assert_eq!(insert_result, &nodeA);
+    assert_eq!(insert_result.left, Some(3));
+    assert_eq!(insert_result.right, Some(5));
+    let node_in_dag = dag.get(&id);
+    assert_eq!(
+        node_in_dag, 
+        Some(&Node {
+            id,
+            left: nodeA.left,
+            right: nodeA.right,
+        })
+    );
+    assert_ne!(
+        node_in_dag.expect("Wrong value assumption.").left, 
+        nodeB.left,
+    );
+    assert_ne!(
+        node_in_dag.expect("Wrong value assumption.").right, 
+        nodeB.right,
+    )
 }
