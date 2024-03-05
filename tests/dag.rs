@@ -45,10 +45,12 @@ fn insert_existing_node_id_does_not_update() {
         node_in_dag.expect("Wrong value assumption.").right, 
         nodeB.right,
     );
-    // Examine the DAG's collition list
+    // Examine the DAG's collition collection
     let collitions = dag.get_collitions(&id).expect("Wrong value assumption.");
-    assert_eq!(collitions, &vec!(nodeB));
-    assert_eq!(collitions[0].id, nodeB.id);
-    assert_eq!(collitions[0].left, nodeB.left);
-    assert_eq!(collitions[0].right, nodeB.right);
+    let colliding_node = collitions.get(&nodeB);
+    assert!(collitions.contains(&nodeB));
+    assert!(!collitions.contains(&nodeA));
+    assert_eq!(collitions.get(&nodeB).expect("Wrong value assumption.").id, nodeB.id);
+    assert_eq!(collitions.get(&nodeB).expect("Wrong value assumption.").left, nodeB.left);
+    assert_eq!(collitions.get(&nodeB).expect("Wrong value assumption.").right, nodeB.right);
 }

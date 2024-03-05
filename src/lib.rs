@@ -1,8 +1,12 @@
-use std::collections::HashMap;
+use std::collections::{
+    HashMap,
+    HashSet,
+};
 use core::{
     hash::Hash,
     fmt::Debug
 };
+mod collitions;
 
 #[derive(Debug, Clone, Hash, Copy)]
 pub struct Node<T: Eq + Hash + PartialEq + Copy> {
@@ -33,7 +37,7 @@ impl<T: Eq + Hash + PartialEq + Copy> Node<T> {
 #[derive(Debug, Clone)]
 pub struct Dag<T: Eq + Hash + PartialEq + Copy> {
     nodes: HashMap<T, Node<T>>,
-    collitions: HashMap<T, Vec<Node<T>>>
+    collitions: HashMap<T, HashSet<Node<T>>>
 }
 
 impl<T: Eq + Hash + PartialEq + Copy + Debug> Dag<T> {
@@ -51,12 +55,13 @@ impl<T: Eq + Hash + PartialEq + Copy + Debug> Dag<T> {
         let id = node.id.clone();
         if self.nodes.contains_key(&id) {
             match self.collitions.get_mut(&id) {
-                Some(collition_list) => { 
-                    collition_list.push(node);
+                Some(collition_set) => { 
+                    collition_set.insert(node);
                 },
                 None => {
-                    let mut collition_list = vec![node];
-                    assert_eq!(self.collitions.insert(id, vec![node]), None);
+                    let mut collition_set = HashSet::new();
+                    assert!(collition_set.insert(node));
+                    assert_eq!(self.collitions.insert(id, collition_set), None);
                 },
             };
             self.nodes.get(&id)
@@ -74,7 +79,7 @@ impl<T: Eq + Hash + PartialEq + Copy + Debug> Dag<T> {
     pub fn get(&self, id: &T) -> Option<&Node<T>> {
         self.nodes.get(id)
     }
-    pub fn get_collitions(&self, id: &T) -> Option<&Vec<Node<T>>> {
+    pub fn get_collitions(&self, id: &T) -> Option<&HashSet<Node<T>>> {
         self.collitions.get(id)
     }
 }
