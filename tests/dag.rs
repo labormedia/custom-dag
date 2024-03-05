@@ -46,7 +46,7 @@ fn insert_existing_node_id_does_not_update() {
         nodeB.right,
     );
     // Examine the DAG's collition list
-    let collitions = dag.collitions.get(&id).expect("Wrong value assumption.");
+    let collitions = dag.get_collitions(&id).expect("Wrong value assumption.");
     assert_eq!(collitions, &vec!(nodeB));
     assert_eq!(collitions[0].id, nodeB.id);
     assert_eq!(collitions[0].left, nodeB.left);

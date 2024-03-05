@@ -33,7 +33,7 @@ impl<T: Eq + Hash + PartialEq + Copy> Node<T> {
 #[derive(Debug, Clone)]
 pub struct Dag<T: Eq + Hash + PartialEq + Copy> {
     nodes: HashMap<T, Node<T>>,
-    pub collitions: HashMap<T, Vec<Node<T>>>
+    collitions: HashMap<T, Vec<Node<T>>>
 }
 
 impl<T: Eq + Hash + PartialEq + Copy + Debug> Dag<T> {
@@ -73,6 +73,9 @@ impl<T: Eq + Hash + PartialEq + Copy + Debug> Dag<T> {
     }
     pub fn get(&self, id: &T) -> Option<&Node<T>> {
         self.nodes.get(id)
+    }
+    pub fn get_collitions(&self, id: &T) -> Option<&Vec<Node<T>>> {
+        self.collitions.get(id)
     }
 }
 
