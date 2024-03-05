@@ -6,7 +6,8 @@ use core::{
     hash::Hash,
     fmt::Debug
 };
-mod collitions;
+pub mod collitions;
+use collitions::CollidingNode;
 
 #[derive(Debug, Clone, Hash, Copy)]
 pub struct Node<T: Eq + Hash + PartialEq + Copy> {
@@ -37,7 +38,7 @@ impl<T: Eq + Hash + PartialEq + Copy> Node<T> {
 #[derive(Debug, Clone)]
 pub struct Dag<T: Eq + Hash + PartialEq + Copy> {
     nodes: HashMap<T, Node<T>>,
-    collitions: HashMap<T, HashSet<Node<T>>>
+    collitions: HashMap<T, HashSet<CollidingNode<T>>>
 }
 
 impl<T: Eq + Hash + PartialEq + Copy + Debug> Dag<T> {
@@ -56,11 +57,11 @@ impl<T: Eq + Hash + PartialEq + Copy + Debug> Dag<T> {
         if self.nodes.contains_key(&id) {
             match self.collitions.get_mut(&id) {
                 Some(collition_set) => { 
-                    collition_set.insert(node);
+                    collition_set.insert(node.into());
                 },
                 None => {
                     let mut collition_set = HashSet::new();
-                    assert!(collition_set.insert(node));
+                    assert!(collition_set.insert(CollidingNode::from(node)));
                     assert_eq!(self.collitions.insert(id, collition_set), None);
                 },
             };
@@ -79,7 +80,7 @@ impl<T: Eq + Hash + PartialEq + Copy + Debug> Dag<T> {
     pub fn get(&self, id: &T) -> Option<&Node<T>> {
         self.nodes.get(id)
     }
-    pub fn get_collitions(&self, id: &T) -> Option<&HashSet<Node<T>>> {
+    pub fn get_collitions(&self, id: &T) -> Option<&HashSet<CollidingNode<T>>> {
         self.collitions.get(id)
     }
 }
