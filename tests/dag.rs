@@ -39,7 +39,7 @@ fn insert_existing_node_id_does_not_update() {
     assert!(dag.get(&nodeA.id).expect("Wrond type assumption.").has_same_fields_to(&nodeA));
     // When trying to insert a new Node<T> with the same id, it will return the present node and will deflect the insertion to the collition collection.
     // The returned value of this action is the node already prensent, with the same id.
-    let insert_result = dag.insert(nodeB).expect("Wrond type assumption.");
+    let insert_result = dag.insert(nodeB).expect("Wrond value assumption.");
     assert_eq!(insert_result, nodeA);
     assert_eq!(insert_result.left, Some(3));
     assert_eq!(insert_result.right, Some(5));
@@ -84,7 +84,7 @@ fn insert_existing_node_marks_dag_unsafe() {
     let mut dag = Dag::new();
     // Inserts nodeA into the DAG.
     assert_eq!(dag.insert(nodeA), None);
-    assert_eq!(dag.get(&nodeA.id).expect("Wrond type assumption."), &nodeA);
+    assert_eq!(dag.get(&nodeA.id).expect("Wrond value assumption."), &nodeA);
     // Dag is still marked as safe (no cycles) after first insertion.
     assert!(dag.is_safe());
     // Trying to insert a node with the id of an already inserted node collects the collition and returns the value of the previously inserted node, which will persist in the DAG.
@@ -95,7 +95,7 @@ fn insert_existing_node_marks_dag_unsafe() {
     assert_eq!(colliding_node, &CollidingNode::from(nodeB));assert_eq!(colliding_node, &CollidingNode::from(nodeB));
 
     // Node in dag with id 0 is still nodeA, but not nodeB.
-    let node_in_dag = dag.get(&nodeA.id).expect("Wrond type assumption.");
+    let node_in_dag = dag.get(&nodeA.id).expect("Wrond value assumption.");
     assert!(node_in_dag.has_same_fields_to(&nodeA));
     assert!(!node_in_dag.has_same_fields_to(&nodeB));
 
