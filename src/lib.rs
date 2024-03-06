@@ -53,10 +53,10 @@ impl<T: Eq + Hash + PartialEq + Copy + Debug> Dag<T> {
             collitions: HashMap::new(),
         }
     }
-    // Inserts a value only if the value doesn't exists, otherwise it accumulates it collects it on a collition map.
-    // If the intented behavious is updating an existing value, insert_or_update method should be used instead.
-    // If the id is not present in the dag, the node is inserted and None is returned.
-    // If the id is present, it does not update the dag. Instead it returns the value that was present before and accumulates the collition.
+    /// Inserts a value only if the value doesn't exists, otherwise it accumulates it collects it on a collition map.
+    /// If the intented behavious is updating an existing value, insert_or_update method should be used instead.
+    /// If the id is not present in the dag, the node is inserted and None is returned.
+    /// If the id is present it does not update the dag, returns the value that was present previously and accumulates the collition.
     pub fn insert(&mut self, node: Node<T>) -> Option<&Node<T>> {
         let id = node.id.clone();
         if self.nodes.contains_key(&id) {
