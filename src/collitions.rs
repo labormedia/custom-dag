@@ -1,8 +1,8 @@
 use core::hash::Hash;
 use crate::Node;
 
-/// CollidingNode<T> is a struct similar and exchangeable to Node<T>. Whereas normal Node<T>
-/// are defined to be equal if the id is equal, CollingNode<T> will be different if *any* field is different.
+/// `CollidingNode<T>` is a struct similar and exchangeable to `Node<T>`. Whereas normal `Node<T>`
+/// are defined to be equal if the id is equal, `CollingNode<T>` will be different if *any* field is different.
 #[derive(Debug, Clone, Hash, Copy, PartialEq, Eq)]
 pub struct CollidingNode<T: Eq + Hash + PartialEq + Copy> {
     pub id: T,
