@@ -31,7 +31,6 @@ impl<T: Eq + Hash + PartialEq + Copy> Eq for Node<T> {}
 impl<T: Eq + Hash + PartialEq + Copy> Node<T> {
     /// The Node itself can be self-referential and makes no assumptions about the structure of the graph.
     /// Nodes define two ancestors by their id defined in left and right fields of same type as the id of the node itself.
-    /// As nodes only specifies ancestors and its id, if the node id didn't exist before the insertion then it will always preserve the structure of a DAG.
     pub fn new(id: T, left: Option<T>, right: Option<T>) -> Self {
         Node {
             id,
@@ -65,7 +64,9 @@ impl<T: Eq + Hash + PartialEq + Copy + Debug> Dag<T> {
         }
     }
     /// Inserts a value only if the value doesn't exists, otherwise it collects it on a collition map.
-    /// If the intented behavious is updating an existing value, insert_or_update method should be used instead,
+    /// Not that as nodes only specifies ancestors and its id (but not descendants), if the node's id are not already included in the dag before the insertion
+    /// but their references are or None, then it will always preserve the structure of a DAG.
+    /// If the intented behaviour is updating an existing value, insert_or_update method should be used instead,
     /// though this will create an unsafe condition for the acyclic structure of the DAG, and this will be marked in the is_safe (bool) field.
     /// If the id is not present in the dag, the node is inserted and None is returned.
     /// If the id is present it does not update the dag, returns the value that was present previously and accumulates the collition.
