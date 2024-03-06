@@ -1,3 +1,5 @@
+//! Custom-dag is a general purpose directed acyclic graph analyzer written entirely on Rust.
+//! # How to use
 use std::collections::{
     HashMap,
     HashSet,
@@ -6,9 +8,11 @@ use core::{
     hash::Hash,
     fmt::Debug
 };
+/// This module includes the code necessary for node collition analysis when manipulating the DAG structure.
 pub mod collitions;
 use collitions::CollidingNode;
 
+/// Custom Node struct.
 #[derive(Debug, Clone, Hash, Copy)]
 pub struct Node<T: Eq + Hash + PartialEq + Copy> {
     pub id: T,
@@ -25,7 +29,7 @@ impl<T: Eq + Hash + PartialEq + Copy> PartialEq<Node<T>> for Node<T> {
 impl<T: Eq + Hash + PartialEq + Copy> Eq for Node<T> {}
 
 impl<T: Eq + Hash + PartialEq + Copy> Node<T> {
-    // The Node itself can be self-referential and makes no assumptions about the structure of the graph.
+    /// The Node itself can be self-referential and makes no assumptions about the structure of the graph.
     pub fn new(id: T, left: Option<T>, right: Option<T>) -> Self {
         Node {
             id,
@@ -35,6 +39,7 @@ impl<T: Eq + Hash + PartialEq + Copy> Node<T> {
     }
 }
 
+/// Dag struct.
 #[derive(Debug, Clone)]
 pub struct Dag<T: Eq + Hash + PartialEq + Copy> {
     nodes: HashMap<T, Node<T>>,

@@ -1,9 +1,8 @@
 use core::hash::Hash;
 use crate::Node;
 
-// For comparison purposes, colliding nodes are marked with a different type than normal nodes because normal nodes
-// are defined to be equal if the id is equal, whereas colliding nodes will be different if *any* field is different.
-// This feature will make the comparison logic more suitable for colliding analysis.
+/// CollidingNode<T> is a struct similar and exchangeable to Node<T>. Whereas normal Node<T>
+/// are defined to be equal if the id is equal, CollingNode<T> will be different if *any* field is different.
 #[derive(Debug, Clone, Hash, Copy, PartialEq, Eq)]
 pub struct CollidingNode<T: Eq + Hash + PartialEq + Copy> {
     pub id: T,
