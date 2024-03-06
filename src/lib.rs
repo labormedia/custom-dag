@@ -30,6 +30,8 @@ impl<T: Eq + Hash + PartialEq + Copy> Eq for Node<T> {}
 
 impl<T: Eq + Hash + PartialEq + Copy> Node<T> {
     /// The Node itself can be self-referential and makes no assumptions about the structure of the graph.
+    /// Nodes define two ancestors by their id defined in left and right fields of same type as the id of the node itself.
+    /// As nodes only specifies ancestors and its id, if the node id didn't exist before the insertion then it will always preserve the structure of a DAG.
     pub fn new(id: T, left: Option<T>, right: Option<T>) -> Self {
         Node {
             id,
@@ -37,13 +39,21 @@ impl<T: Eq + Hash + PartialEq + Copy> Node<T> {
             right,
         }
     }
+    pub fn has_same_fields_to(&self, node: &Node<T>) -> bool {
+        self.id == node.id
+        &&
+        self.left == node.left
+        &&
+        self.right == node.right
+    }
 }
 
 /// Dag struct.
 #[derive(Debug, Clone)]
 pub struct Dag<T: Eq + Hash + PartialEq + Copy> {
     nodes: HashMap<T, Node<T>>,
-    collitions: HashMap<T, HashSet<CollidingNode<T>>>
+    collitions: HashMap<T, HashSet<CollidingNode<T>>>,
+    is_safe: bool,
 }
 
 impl<T: Eq + Hash + PartialEq + Copy + Debug> Dag<T> {
@@ -51,13 +61,15 @@ impl<T: Eq + Hash + PartialEq + Copy + Debug> Dag<T> {
         Dag {
             nodes: HashMap::new(),
             collitions: HashMap::new(),
+            is_safe: true,
         }
     }
-    /// Inserts a value only if the value doesn't exists, otherwise it accumulates it collects it on a collition map.
-    /// If the intented behavious is updating an existing value, insert_or_update method should be used instead.
+    /// Inserts a value only if the value doesn't exists, otherwise it collects it on a collition map.
+    /// If the intented behavious is updating an existing value, insert_or_update method should be used instead,
+    /// though this will create an unsafe condition for the acyclic structure of the DAG, and this will be marked in the is_safe (bool) field.
     /// If the id is not present in the dag, the node is inserted and None is returned.
     /// If the id is present it does not update the dag, returns the value that was present previously and accumulates the collition.
-    pub fn insert(&mut self, node: Node<T>) -> Option<&Node<T>> {
+    pub fn insert(&mut self, node: Node<T>) -> Option<Node<T>> {
         let id = node.id.clone();
         if self.nodes.contains_key(&id) {
             match self.collitions.get_mut(&id) {
@@ -70,13 +82,16 @@ impl<T: Eq + Hash + PartialEq + Copy + Debug> Dag<T> {
                     assert_eq!(self.collitions.insert(id, collition_set), None);
                 },
             };
-            self.nodes.get(&id)
+            self.nodes.get(&id).copied()
         } else {
             assert_eq!(self.nodes.insert(node.id, node), None);
             None
         }
     }
+    /// This method updates a node if it already exists.
+    /// If this method is used effectively, the DAG will be marked as unsafe in its is_safe field as a false value.
     pub fn insert_or_update(&mut self, node: Node<T>) -> Option<Node<T>> {
+        self.is_safe = false;
         self.nodes.insert(node.id, node)
     }
     pub fn contains_id(&self, id: &T) -> bool {
@@ -87,6 +102,9 @@ impl<T: Eq + Hash + PartialEq + Copy + Debug> Dag<T> {
     }
     pub fn get_collitions(&self, id: &T) -> Option<&HashSet<CollidingNode<T>>> {
         self.collitions.get(id)
+    }
+    pub fn is_safe(&mut self) -> bool {
+        if self.is_safe { true } else { false }
     }
 }
 
@@ -168,5 +186,17 @@ mod tests {
             }
         )
     }
-    
+    #[test]
+    fn has_same_fields_to() {
+        type TestType = u32;
+        let id: TestType = 0;
+        let nodeA = Node::new(id,Some(3),Some(5));
+        let nodeB = Node::new(id,Some(42),Some(43));
+
+        let nodeC = Node::new(id, Some(3), Some(5));
+
+        assert!(nodeA.has_same_fields_to(&nodeA));
+        assert!(nodeA.has_same_fields_to(&nodeC));
+        assert!(!nodeA.has_same_fields_to(&nodeB));
+    }
 }

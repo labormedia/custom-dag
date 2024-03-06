@@ -19,3 +19,13 @@ impl<T: Eq + Hash + PartialEq + Copy> From<Node<T>> for CollidingNode<T> {
         }
     }
 }
+
+impl<T: Eq + Hash + PartialEq + Copy> CollidingNode<T> {
+    pub fn has_same_fields_to(&self, node: &Node<T>) -> bool {
+        self.id == node.id
+        &&
+        self.left == node.left
+        &&
+        self.right == node.right
+    }
+}
