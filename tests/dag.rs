@@ -37,10 +37,10 @@ fn insert_existing_node_id_does_not_update() {
     assert_ne!(nodeA.left, nodeB.left);
     // The new node was not present in the dag, so it gets inserted in the DAG.
     assert_eq!(dag.insert(nodeA), None);
-    assert!(dag.get(&nodeA.id).expect("Wrond type assumption.").has_same_fields_to(&nodeA));
+    assert!(dag.get(&nodeA.id).expect("Wrong type assumption.").has_same_fields_to(&nodeA));
     // When trying to insert a new Node<T> with the same id, it will return the present node and will deflect the insertion to the collition collection.
     // The returned value of this action is the node already prensent, with the same id.
-    let insert_result = dag.insert(nodeB).expect("Wrond value assumption.");
+    let insert_result = dag.insert(nodeB).expect("Wrong value assumption.");
     assert_eq!(insert_result, nodeA);
     assert_eq!(insert_result.left, None);
     assert_eq!(insert_result.right, None);
@@ -85,7 +85,7 @@ fn insert_existing_node_marks_dag_unsafe() {
     let mut dag = Dag::new();
     // Inserts nodeA into the DAG.
     assert_eq!(dag.insert(nodeA), None);
-    assert!(dag.get(&nodeA.id).expect("Wrond value assumption.").has_same_fields_to(&nodeA));
+    assert!(dag.get(&nodeA.id).expect("Wrong value assumption.").has_same_fields_to(&nodeA));
     // Dag is still marked as safe (no cycles) after first insertion.
     assert!(dag.is_safe());
     // Trying to insert a node with the id of an already inserted node collects the collition and returns the value of the previously inserted node, which will persist in the DAG.
@@ -93,12 +93,12 @@ fn insert_existing_node_marks_dag_unsafe() {
     // Examine the DAG's collition collection.
     let collitions: &HashSet<CollidingNode<TestType>> = dag.get_collitions(&id).expect("Wrong value assumption.");
     let colliding_node = collitions.get(&CollidingNode::from(nodeB)).expect("Wrong value assumption.");
-    assert_eq!(colliding_node, &CollidingNode::from(nodeB));assert_eq!(colliding_node, &CollidingNode::from(nodeB));
+    assert_eq!(colliding_node, &CollidingNode::from(nodeB));
+    assert_eq!(colliding_node, &CollidingNode::from(nodeB));
 
     // Node in dag with id 0 is still nodeA, but not nodeB.
-    let node_in_dag = dag.get(&nodeA.id).expect("Wrond value assumption.");
+    let node_in_dag = dag.get(&nodeA.id).expect("Wrong value assumption.");
     assert!(node_in_dag.has_same_fields_to(&nodeA));
-    assert!(!node_in_dag.has_same_fields_to(&nodeB));
 
     // insert_or_update updates the dag values for the node id 0 and returns the previous values, nodeA. 
     // The final fields values for the node id 0 in the dag are equal to nodeB but not nodeA.
@@ -106,6 +106,7 @@ fn insert_existing_node_marks_dag_unsafe() {
     assert!(!dag.get(&nodeA.id).expect("Wrong value assumption.").has_same_fields_to(&nodeA));
     assert!(dag.get(&nodeA.id).expect("Wrong value assumption.").has_same_fields_to(&nodeB));
 
+    assert!(!dag.is_safe());
 }
 
 #[test]
