@@ -21,7 +21,8 @@ fn create_1_000_000_random_nodes_unconnected_DAG() {
     }
     for i in 0..1_000_000 {
         assert!(dag.contains_id(&i));
-    }
+    };
+    assert!(dag.is_safe())
 }
 
 #[test]
@@ -108,11 +109,39 @@ fn insert_existing_node_marks_dag_unsafe() {
 }
 
 #[test]
-fn insert_a_node_with_non_existent_references_marks_dag_unsafe() {
+fn insert_a_node_with_non_existent_left_reference_marks_dag_unsafe() {
     type TestType = u32;
     let id: TestType = 0;
-    let nodeA = Node::new(id,Some(3),Some(5));
+    let nodeA = Node::new(id,Some(3),None);
     let mut dag = Dag::new();
     assert_eq!(dag.insert(nodeA), Some(nodeA));
     assert_eq!(dag.is_safe(), false);
+}
+
+#[test]
+fn insert_a_node_with_non_existent_right_reference_marks_dag_unsafe() {
+    type TestType = u32;
+    let id: TestType = 0;
+    let nodeA = Node::new(id,None,Some(5));
+    let mut dag = Dag::new();
+    assert_eq!(dag.insert(nodeA), Some(nodeA));
+    assert_eq!(dag.is_safe(), false);
+}
+
+#[test]
+fn insert_non_existent_nodes_with_existent_references_is_safe() {
+    let nodeA = Node::new(0,None,None);
+    let nodeB = Node::new(1,Some(0),None);
+    let nodeC = Node::new(2,None,Some(0));
+    let nodeD = Node::new(3,Some(0), Some(1));
+    let nodeE = Node::new(4,Some(2), Some(1));
+    let nodeF = Node::new(5,Some(3), Some(4));
+    let mut dag = Dag::new();
+    assert_eq!(dag.insert(nodeA), None);
+    assert_eq!(dag.insert(nodeB), None);
+    assert_eq!(dag.insert(nodeC), None);
+    assert_eq!(dag.insert(nodeD), None);
+    assert_eq!(dag.insert(nodeE), None);
+    assert_eq!(dag.insert(nodeF), None);
+    assert!(dag.is_safe())
 }
