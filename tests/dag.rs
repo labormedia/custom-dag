@@ -28,7 +28,7 @@ fn create_1_000_000_random_nodes_unconnected_DAG() {
 fn insert_existing_node_id_does_not_update() {
     type TestType = u32;
     let id: TestType = 0;
-    let nodeA = Node::new(id,Some(3),Some(5));
+    let nodeA = Node::new(id,None,None);
     let nodeB = Node::new(id,Some(42),Some(43));
     let mut dag = Dag::new();
     // Nodes are considered equal by id under the Node<T> type, but they can contain different field values (other than id).
@@ -41,8 +41,8 @@ fn insert_existing_node_id_does_not_update() {
     // The returned value of this action is the node already prensent, with the same id.
     let insert_result = dag.insert(nodeB).expect("Wrond value assumption.");
     assert_eq!(insert_result, nodeA);
-    assert_eq!(insert_result.left, Some(3));
-    assert_eq!(insert_result.right, Some(5));
+    assert_eq!(insert_result.left, None);
+    assert_eq!(insert_result.right, None);
     let node_in_dag = dag.get(&id);
     assert_eq!(
         node_in_dag, 
@@ -79,7 +79,7 @@ fn insert_existing_node_id_does_not_update() {
 fn insert_existing_node_marks_dag_unsafe() {
     type TestType = u32;
     let id: TestType = 0;
-    let nodeA = Node::new(id,Some(3),Some(5));
+    let nodeA = Node::new(id,None,None);
     let nodeB = Node::new(id,Some(42),Some(43));
     let mut dag = Dag::new();
     // Inserts nodeA into the DAG.
@@ -105,4 +105,14 @@ fn insert_existing_node_marks_dag_unsafe() {
     assert!(!dag.get(&nodeA.id).expect("Wrong value assumption.").has_same_fields_to(&nodeA));
     assert!(dag.get(&nodeA.id).expect("Wrong value assumption.").has_same_fields_to(&nodeB));
 
+}
+
+#[test]
+fn insert_a_node_with_non_existent_references_marks_dag_unsafe() {
+    type TestType = u32;
+    let id: TestType = 0;
+    let nodeA = Node::new(id,Some(3),Some(5));
+    let mut dag = Dag::new();
+    assert_eq!(dag.insert(nodeA), Some(nodeA));
+    assert_eq!(dag.is_safe(), false);
 }

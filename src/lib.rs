@@ -51,7 +51,7 @@ impl<T: Eq + Hash + PartialEq + Copy> Node<T> {
 #[derive(Debug, Clone)]
 pub struct Dag<T: Eq + Hash + PartialEq + Copy> {
     nodes: HashMap<T, Node<T>>,
-    collitions: HashMap<T, HashSet<CollidingNode<T>>>,
+    possible_collitions: HashMap<T, HashSet<CollidingNode<T>>>,
     is_safe: bool,
 }
 
@@ -59,7 +59,7 @@ impl<T: Eq + Hash + PartialEq + Copy + Debug> Dag<T> {
     pub fn new() -> Self {
         Dag {
             nodes: HashMap::new(),
-            collitions: HashMap::new(),
+            possible_collitions: HashMap::new(),
             is_safe: true,
         }
     }
@@ -68,23 +68,36 @@ impl<T: Eq + Hash + PartialEq + Copy + Debug> Dag<T> {
     /// but their references are or None, then it will always preserve the structure of a DAG.
     /// If the intented behaviour is updating an existing value, insert_or_update method should be used instead,
     /// though this will create an unsafe condition for the acyclic structure of the DAG, and this will be marked in the is_safe (bool) field.
-    /// If the id is not present in the dag, the node is inserted and None is returned.
-    /// If the id is present it does not update the dag, returns the value that was present previously and accumulates the collition.
+    /// If the id is not present in the dag but their references are, the node is inserted and None is returned.
+    /// If the id is not present in the dag and at least one of their reference is neither, it inserts the node in the dag but marks the is_safe flag as false and returns an option with the new value added to the dag.
+    /// If the id is present it does not update the dag, returns an option with the value that was present previously and accumulates the collition.
     pub fn insert(&mut self, node: Node<T>) -> Option<Node<T>> {
-        let id = node.id.clone();
-        if self.nodes.contains_key(&id) {
-            match self.collitions.get_mut(&id) {
+        if self.nodes.contains_key(&node.id) {
+            match self.possible_collitions.get_mut(&node.id) {
                 Some(collition_set) => { 
                     collition_set.insert(node.into());
                 },
                 None => {
                     let mut collition_set = HashSet::new();
                     assert!(collition_set.insert(CollidingNode::from(node)));
-                    assert_eq!(self.collitions.insert(id, collition_set), None);
+                    assert_eq!(self.possible_collitions.insert(node.id, collition_set), None);
                 },
             };
-            self.nodes.get(&id).copied()
-        } else {
+            self.nodes.get(&node.id).copied()
+        } else if node.left != None
+            && !self.nodes.contains_key(&node.left.expect("Wrong type definition assumption for Node<T>."))
+        {
+            self.is_safe = false;
+            assert_eq!(self.nodes.insert(node.id, node), None);
+            self.nodes.get(&node.id).copied()
+        } else if node.right != None 
+            && !self.nodes.contains_key(&node.right.expect("Wrong type definition assumption for Node<T>."))
+        {
+            self.is_safe = false;
+            assert_eq!(self.nodes.insert(node.id, node), None);
+            self.nodes.get(&node.id).copied()
+        }
+        else {
             assert_eq!(self.nodes.insert(node.id, node), None);
             None
         }
@@ -102,7 +115,7 @@ impl<T: Eq + Hash + PartialEq + Copy + Debug> Dag<T> {
         self.nodes.get(id)
     }
     pub fn get_collitions(&self, id: &T) -> Option<&HashSet<CollidingNode<T>>> {
-        self.collitions.get(id)
+        self.possible_collitions.get(id)
     }
     pub fn is_safe(&mut self) -> bool {
         if self.is_safe { true } else { false }
