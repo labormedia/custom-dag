@@ -10,6 +10,8 @@ use core::{
 };
 /// This module includes the code necessary for node collition analysis when manipulating the DAG structure.
 pub mod collitions;
+/// This modules includes the helpers necessary for topological analysis of dag structure.
+mod topological;
 use collitions::CollidingNode;
 
 /// Custom Node struct.
@@ -63,6 +65,11 @@ impl<T: Eq + Hash + PartialEq + Copy + Debug> Dag<T> {
             possible_collitions: HashMap::new(),
             is_safe: true,
         }
+    }
+    /// Creates a new Dag from a topological order of nodes.
+    /// If the generation is succesful (i.e. exists a topological order for the nodes list) returns true, otherwise false.
+    pub fn from(node_list: &[Node<T>]) -> bool {
+        false
     }
     /// Inserts nodes to the dag from a list.
     pub fn insert_from(&mut self, node_list: &[Node<T>]) -> Vec<Option<Node<T>>> {
