@@ -56,7 +56,7 @@ pub struct Dag<T: Eq + Hash + PartialEq + Copy> {
 }
 
 impl<T: Eq + Hash + PartialEq + Copy + Debug> Dag<T> {
-    /// Creates a new Dag marked as safe (No possible cycles).
+    /// Creates a new empty Dag marked as safe (No possible cycles).
     pub fn new() -> Self {
         Dag {
             nodes: HashMap::new(),
@@ -64,6 +64,7 @@ impl<T: Eq + Hash + PartialEq + Copy + Debug> Dag<T> {
             is_safe: true,
         }
     }
+    /// Inserts nodes to the dag from a list.
     pub fn insert_from(&mut self, node_list: &[Node<T>]) -> Vec<Option<Node<T>>> {
         let node_iterator = node_list.iter();
         node_iterator.map(|node| { 
