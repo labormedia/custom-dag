@@ -143,7 +143,7 @@ fn insert_non_existent_nodes_with_existent_references_is_safe() {
 }
 
 #[test]
-fn insert_dag_from_vec() {
+fn insert_dag_from_list() {
     let node_a = Node::new(0,None,None);
     let node_b = Node::new(1,Some(0),None);
     let node_c = Node::new(2,None,Some(0));
