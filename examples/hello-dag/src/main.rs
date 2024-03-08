@@ -2,6 +2,9 @@ use custom_dag::{
     Node,
     Dag,
 };
+// randomness is added to the integration tests to assert the validity of nodes that could contain any value within the range of the id type.
+// This means that the tests using the random generator are not deterministic.
+// A complete formal verification should include all the values of the id type set.
 use rand::Rng;
 
 fn main() {

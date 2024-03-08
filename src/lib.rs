@@ -56,6 +56,7 @@ pub struct Dag<T: Eq + Hash + PartialEq + Copy> {
 }
 
 impl<T: Eq + Hash + PartialEq + Copy + Debug> Dag<T> {
+    /// Creates a new Dag marked as safe (No possible cycles).
     pub fn new() -> Self {
         Dag {
             nodes: HashMap::new(),
@@ -63,8 +64,14 @@ impl<T: Eq + Hash + PartialEq + Copy + Debug> Dag<T> {
             is_safe: true,
         }
     }
+    pub fn insert_from(&mut self, node_list: &[Node<T>]) -> Vec<Option<Node<T>>> {
+        let node_iterator = node_list.iter();
+        node_iterator.map(|node| { 
+            self.insert(*node)
+        }).collect()
+    }
     /// Inserts a value only if the value doesn't exists, otherwise it collects it on a collition map.
-    /// Not that as nodes only specifies ancestors and its id (but not descendants), if the node's id are not already included in the dag before the insertion
+    /// Note that as nodes only specifies ancestors and its id (but not descendants), if the node's id are not already included in the dag before the insertion
     /// but their references are or None, then it will always preserve the structure of a DAG.
     /// If the intented behaviour is updating an existing value, insert_or_update method should be used instead,
     /// though this will create an unsafe condition for the acyclic structure of the DAG, and this will be marked in the is_safe (bool) field.
@@ -204,13 +211,13 @@ mod tests {
     fn has_same_fields_to() {
         type TestType = u32;
         let id: TestType = 0;
-        let nodeA = Node::new(id,Some(3),Some(5));
-        let nodeB = Node::new(id,Some(42),Some(43));
+        let node_a = Node::new(id,Some(3),Some(5));
+        let node_b = Node::new(id,Some(42),Some(43));
 
-        let nodeC = Node::new(id, Some(3), Some(5));
+        let node_c = Node::new(id, Some(3), Some(5));
 
-        assert!(nodeA.has_same_fields_to(&nodeA));
-        assert!(nodeA.has_same_fields_to(&nodeC));
-        assert!(!nodeA.has_same_fields_to(&nodeB));
+        assert!(node_a.has_same_fields_to(&node_a));
+        assert!(node_a.has_same_fields_to(&node_c));
+        assert!(!node_a.has_same_fields_to(&node_b));
     }
 }
