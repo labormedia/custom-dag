@@ -38,7 +38,7 @@ pub struct Topology<T: Eq + Hash + PartialEq + Copy + std::fmt::Debug> {
     unique_nodes: HashMap<T, Node<T>>,
     collitions: HashSet<CollidingNode<T>>,
     repeated_nodes: HashMap<T, HashSet<CollidingNode<T>>>,
-    edges: HashMap<T, Vec<T>>,
+    outgoing_edges: HashMap<T, Vec<T>>,
 }
 
 impl<T: Eq + Hash + PartialEq + Copy + std::fmt::Debug> Topology<T> {
@@ -48,7 +48,7 @@ impl<T: Eq + Hash + PartialEq + Copy + std::fmt::Debug> Topology<T> {
             unique_nodes: HashMap::new(),
             collitions: HashSet::new(),
             repeated_nodes: HashMap::new(),
-            edges: HashMap::new(),
+            outgoing_edges: HashMap::new(),
         }
     }
     /// Inserts the node into the topology analysis.
@@ -87,27 +87,27 @@ impl<T: Eq + Hash + PartialEq + Copy + std::fmt::Debug> Topology<T> {
         match node.left {
             None => {},
             Some(ancestor) => {
-                if let Some(edges_for_ancestor) = self.edges.get_mut(&ancestor) { // pushes the node.id to the list of its ancestor's directed edges (directed to it)
+                if let Some(edges_for_ancestor) = self.outgoing_edges.get_mut(&ancestor) { // pushes the node.id to the list of its ancestor's directed edges (directed to it)
                     edges_for_ancestor.push(node.id);  // Inserts the edge 
                 } else {
-                    assert_eq!(self.edges.insert(ancestor, vec!(node.id)), None);  // Inserts the edge and asserts that the list didn't existed before.
+                    assert_eq!(self.outgoing_edges.insert(ancestor, vec!(node.id)), None);  // Inserts the edge and asserts that the list didn't existed before.
                 }
             },
         };
         match node.right {
             None => {},
             Some(ancestor) => {
-                if let Some(edges_for_ancestor) = self.edges.get_mut(&ancestor) { // pushes the node.id to the list of its ancestor's directed edges (directed to it
+                if let Some(edges_for_ancestor) = self.outgoing_edges.get_mut(&ancestor) { // pushes the node.id to the list of its ancestor's directed edges (directed to it
                     edges_for_ancestor.push(node.id); // Inserts the edge
                 } else {
-                    assert_eq!(self.edges.insert(ancestor, vec!(node.id)), None); // Inserts the edge and asserts that the list didn't existed before.
+                    assert_eq!(self.outgoing_edges.insert(ancestor, vec!(node.id)), None); // Inserts the edge and asserts that the list didn't existed before.
                 }
             },
         };
     }
     fn edge_sum(&self) -> usize {
         self
-            .edges
+            .outgoing_edges
             .iter()
             .map(|(from, list)| { list.len() })
             .sum()
@@ -115,14 +115,33 @@ impl<T: Eq + Hash + PartialEq + Copy + std::fmt::Debug> Topology<T> {
     fn get_unique_node_by_id(&self, id:T) -> Option<Node<T>> {
         self.unique_nodes.get(&id).copied()
     }
-    fn sort(nodes:&[CollidingNode<T>]) -> Result<Topology<T>, TopologicalError> {
-        let topology: Topology<T> = Topology::new();
-        for nodes in nodes.iter() {
-            // topology.all_nodes
-            todo!()
-        };
-        Ok::<Topology<T>, TopologicalError>(topology);
-        Err(TopologicalError::Custom)
+    /// Checks the consistency of nodes with its references, 
+    /// i.e. checks: 
+    /// * if all nodes references have been defined -> true
+    /// * if there are no repeated nodes -> true
+    /// * if there are no collitions -> true
+    /// otherwise returns false
+    /// References to itself are not considered.
+    fn is_consistent(&self) -> bool {
+        self.repeated_nodes.len() == 0
+        && self.collitions.len() == 0
+        && self.unique_nodes
+            .iter()
+            .fold(true, |acc, node| {
+                acc &&
+                ( node.1.left == None || self.get_unique_node_by_id(node.1.left.expect("Wrong value assumption")) != None ) &&
+                ( node.1.right == None || self.get_unique_node_by_id(node.1.right.expect("Wrong value assumption")) != None )
+            })
+    }
+    /// Tries to build a topological sort from a list of nodes.
+    /// Returns a sequence of nodes that follows a topological order if it exists, otherwise it returns None.
+    fn sort(nodes:&[Node<T>]) -> Option<Topology<T>> {
+        let mut topology: Topology<T> = Topology::new();
+        // let in_degree: HashMap<T, (usize)> nodes.iter() {
+        //     topology.insert(*node);
+        // };
+        // let incoming_degree: Option<> = if topology.collitions.len()
+        Some(topology)
     }
 }
 
@@ -151,12 +170,13 @@ fn insert_nodes_in_topology_analysis() {
     assert_eq!(topology.edge_sum(), 8);
     assert_eq!(topology.unique_nodes.len(), 6);
     assert_eq!(topology.get_unique_node_by_id(4), Some(node_e)); // Check existence for node_e
-    for (from, to_list) in topology.edges.iter() {
+    for (from, to_list) in topology.outgoing_edges.iter() {
         for to in to_list.iter() {
             let compare_node = topology.get_unique_node_by_id(*to).expect("Wrong value assumptions");
             assert!(compare_node.left == Some(*from) || compare_node.right == Some(*from)); // Checks that all edges corresponds to a node in the original node's list.
         }
     };
+    assert!(topology.is_consistent()); // Upto this stage, the topology is consistent.
     let colliding_node = Node::new(4, None, None);
     assert_eq!(topology.insert(colliding_node), Some(node_e.into())); // Tries to insert a node with the same id of an already indexed node in the topology analysis.
     assert_eq!(topology.collitions.len(), 1); // There's one collition.
@@ -174,10 +194,20 @@ fn insert_nodes_in_topology_analysis() {
     for node in node_list.into_iter() {
         assert_eq!(topology.get_unique_node_by_id(node.id).expect("Wrong value assumption."), node); // The map of unique_nodes is still the original list.
     };
-    for (from, to_list) in topology.edges.iter() {
+    for (from, to_list) in topology.outgoing_edges.iter() {
         for to in to_list.iter() {
             let compare_node = topology.get_unique_node_by_id(*to).expect("Wrong value assumptions");
             assert!(compare_node.left == Some(*from) || compare_node.right == Some(*from)); // All edges still corresponds to a node in the original node's list.
         }
     };
+    assert!(!topology.is_consistent()); // At this stage, the topology is *NOT* consistent.
+}
+
+fn insert_node_with_inexistent_references_is_inconsistent() {
+    let mut topology: Topology<u32> = Topology::new();
+    let node = Node::new(1, None, Some(2));
+    topology.insert(node);
+    assert_eq!(topology.collitions.len(), 0);
+    assert_eq!(topology.repeated_nodes.len(), 0);
+    assert!(!topology.is_consistent());
 }

@@ -47,6 +47,12 @@ impl<T: Eq + Hash + PartialEq + Copy> Node<T> {
         &&
         self.right == node.right
     }
+    pub fn in_degree(&self) -> usize {
+        let mut in_degree: usize = 0;
+        if self.left != None { in_degree += 1 };
+        if self.right != None { in_degree += 1 };
+        in_degree
+    }
 }
 
 /// Dag struct.
