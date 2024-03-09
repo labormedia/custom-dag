@@ -153,7 +153,7 @@ fn insert_nodes_in_topology_analysis() {
     for (from, to_list) in topology.edges.iter() {
         for to in to_list.iter() {
             let compare_node = topology.get_unique_node_by_id(*to).expect("Wrong value assumptions");
-            assert!(compare_node.left == Some(*from) || compare_node.right == Some(*from)); // Checks the existance of all nodes in the original node's list
+            assert!(compare_node.left == Some(*from) || compare_node.right == Some(*from)); // Checks that all edges corresponds to a node in the original node's list.
         }
     };
 }
