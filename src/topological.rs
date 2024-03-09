@@ -68,7 +68,7 @@ impl<T: Eq + Hash + PartialEq + Copy + std::fmt::Debug> Topology<T> {
                 Some(node.into())  // return the colliding node.
             }
         } else { // else if the node existed in the collection of all nodes (compared by all fields)
-            assert_eq!(self.unique_nodes.insert(node.id, node), None);  // It should have been already added to the collection of unique nodes (compared by id).
+            assert_eq!(self.get_unique_node_by_id(node.id), Some(node));  // It should have been already added to the collection of unique nodes (compared by id).
             self.collect_repeated_node(node); // and collects it to the collection of repeated nodes.
             Some(node.into()) // return the colliding node
         }
@@ -136,7 +136,7 @@ fn insert_nodes_in_topology_analysis() {
     let mut topology = Topology::new();
     let node_list = [node_a, node_b, node_c, node_d, node_e, node_f];
     for node in node_list.into_iter() {
-        topology.insert(node);
+        assert_eq!(topology.insert(node), None); // All nodes inserted are new nodes to the topology.
     };
     assert_eq!(topology.all_nodes.get(&Node::new(23, Some(42), Some(50)).into()), None);  // tries to take an inexistent node
     for node in node_list.into_iter() {
@@ -156,4 +156,22 @@ fn insert_nodes_in_topology_analysis() {
             assert!(compare_node.left == Some(*from) || compare_node.right == Some(*from)); // Checks that all edges corresponds to a node in the original node's list.
         }
     };
+    let colliding_node = Node::new(4, None, None);
+    assert_eq!(topology.insert(colliding_node), Some(node_e.into())); // Tries to insert a node with the same id of an already indexed node in the topology analysis.
+    assert_eq!(topology.collitions.len(), 1); // There's one collition.
+    assert_eq!(topology.get_unique_node_by_id(4), Some(node_e)); // Checks that the Node in the collection of unique nodes is still the first one added by the same id.
+    assert_eq!(topology.collitions.get(&node_e.into()), None); // The first added node_e will not be present in the collitions set.
+    assert_eq!(topology.collitions.get(&colliding_node.into()), Some(&colliding_node.into()));  // The colliding node will be present in the collitions set.
+    assert_eq!(topology.repeated_nodes.len(), 0);  // There is no repeated nodes yet.
+    assert_eq!(topology.insert(colliding_node), Some(node_e.into()));
+    assert_eq!(topology.repeated_nodes.len(), 1); // There is one repeated node i.e. the colliding node.
+    assert_eq!(topology.insert(node_b), Some(node_b.into())); // Tries to insert node_b again.
+    assert_eq!(topology.collitions.len(), 1); // The number of collitions is still 1.
+    assert_eq!(topology.repeated_nodes.len(), 2); // The number of repeated nodes is now 2.
+    assert_eq!(topology.edge_sum(), 8); // The number of edges has not changed.
+    assert_eq!(topology.unique_nodes.len(), 6);  // The number of unique nodes has not changed.
+    for node in node_list.into_iter() {
+        assert_eq!(topology.unique_nodes.get(&node.id).expect("Wrong value assumption."), &node); // The map of unique_nodes is still the original list.
+    };
+
 }

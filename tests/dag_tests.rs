@@ -63,7 +63,7 @@ fn insert_existing_node_id_does_not_update() {
     assert_eq!(colliding_node, &CollidingNode::from(node_b));
     // The collitions set contains a CollidingNode that corresponds to node_b.
     assert!(collitions.contains(&node_b.into()));
-    // The collitions set does not contains node_a, even if it has the same id, neither a CollitionNode that corresponds to node_a.
+    // The collitions set does not contains a CollitionNode<Node<T>> that corresponds to node_a.
     assert!(!collitions.contains(&node_a.into()));
     assert!(!collitions.contains(&CollidingNode::from(node_a)));
     // The fields in the colliding node corresponds to node_b, but not to node_a.
