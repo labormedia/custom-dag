@@ -35,7 +35,7 @@ impl fmt::Display for TopologicalError {
 #[derive(Debug, Clone)]
 pub struct Topology<T: Eq + Hash + PartialEq + Copy + std::fmt::Debug> {
     all_nodes: HashSet<CollidingNode<T>>, // collection of all nodes compared by all fields
-    unique_nodes: HashSet<Node<T>>,
+    unique_nodes: HashMap<T, Node<T>>,
     collitions: HashSet<CollidingNode<T>>,
     repeated_nodes: HashMap<T, HashSet<CollidingNode<T>>>,
     edges: HashMap<T, Vec<T>>,
@@ -45,7 +45,7 @@ impl<T: Eq + Hash + PartialEq + Copy + std::fmt::Debug> Topology<T> {
     fn new() -> Topology<T> {
         Topology {
             all_nodes: HashSet::new(),
-            unique_nodes: HashSet::new(),
+            unique_nodes: HashMap::new(),
             collitions: HashSet::new(),
             repeated_nodes: HashMap::new(),
             edges: HashMap::new(),
@@ -56,7 +56,7 @@ impl<T: Eq + Hash + PartialEq + Copy + std::fmt::Debug> Topology<T> {
     /// otherwise it returns None if there is no collision.
     fn insert(&mut self, node: Node<T>) -> Option<CollidingNode<T>>{
         if self.all_nodes.insert(node.into()) { // if the node didn't existed in the collection of all nodes (compared by all fields)
-            if self.unique_nodes.insert(node) { // if the node didn't existed in the collection of unique nodes (compared by id)
+            if self.unique_nodes.insert(node.id, node).is_none() { // if the node didn't existed in the collection of unique nodes (compared by id)
                 self.collect_edges(node); // collect the node's edges
                 None
             } else { // else if the node was already inserted in the collection of unique nodes (compared by id)
@@ -68,7 +68,7 @@ impl<T: Eq + Hash + PartialEq + Copy + std::fmt::Debug> Topology<T> {
                 Some(node.into())  // return the colliding node.
             }
         } else { // else if the node existed in the collection of all nodes (compared by all fields)
-            assert!(self.unique_nodes.insert(node));  // It should have been already added to the collection of unique nodes (compared by id).
+            assert_eq!(self.unique_nodes.insert(node.id, node), None);  // It should have been already added to the collection of unique nodes (compared by id).
             self.collect_repeated_node(node); // and collects it to the collection of repeated nodes.
             Some(node.into()) // return the colliding node
         }
@@ -110,11 +110,15 @@ impl<T: Eq + Hash + PartialEq + Copy + std::fmt::Debug> Topology<T> {
             .iter()
             .map(|(from, list)| { list.len() })
             .sum()
-    } 
+    }
+    fn get_unique_node_by_id(&self, id:T) -> Option<Node<T>> {
+        self.unique_nodes.get(&id).copied()
+    }
     fn sort(nodes:&[CollidingNode<T>]) -> Result<Topology<T>, TopologicalError> {
         let topology: Topology<T> = Topology::new();
         for nodes in nodes.iter() {
             // topology.all_nodes
+            todo!()
         };
         Ok::<Topology<T>, TopologicalError>(topology);
         Err(TopologicalError::Custom)
@@ -139,12 +143,17 @@ fn insert_nodes_in_topology_analysis() {
         assert_eq!(topology.all_nodes.get(&node.into()).expect("Wrong value assumption."), &CollidingNode(node));
     };
     for node in node_list.into_iter() {
-        assert_eq!(topology.unique_nodes.get(&node.into()).expect("Wrong value assumption."), &node);
+        assert_eq!(topology.unique_nodes.get(&node.id).expect("Wrong value assumption."), &node);
     };
     assert_eq!(topology.collitions.len(), 0);
     assert_eq!(topology.repeated_nodes.len(), 0);
     assert_eq!(topology.edge_sum(), 8);
-    // for (from, to) in topology.edges.iter() {
-    //     topology.unique_nodes.get
-    // }
+    assert_eq!(topology.unique_nodes.len(), 6);
+    assert_eq!(topology.get_unique_node_by_id(4), Some(node_e)); // Check existence for node_e
+    for (from, to_list) in topology.edges.iter() {
+        for to in to_list.iter() {
+            let compare_node = topology.get_unique_node_by_id(*to).expect("Wrong value assumptions");
+            assert!(compare_node.left == Some(*from) || compare_node.right == Some(*from)); // Checks the existance of all nodes in the original node's list
+        }
+    };
 }
