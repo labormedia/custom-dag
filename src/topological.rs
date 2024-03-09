@@ -56,7 +56,8 @@ impl<T: Eq + Hash + PartialEq + Copy + std::fmt::Debug> Topology<T> {
     /// otherwise it returns None if there is no collision.
     fn insert(&mut self, node: Node<T>) -> Option<CollidingNode<T>>{
         if self.all_nodes.insert(node.into()) { // if the node didn't existed in the collection of all nodes (compared by all fields)
-            if self.unique_nodes.insert(node.id, node).is_none() { // if the node didn't existed in the collection of unique nodes (compared by id)
+            if self.get_unique_node_by_id(node.id) == None { // if the node didn't existed in the collection of unique nodes (compared by id)
+                assert_eq!(self.unique_nodes.insert(node.id, node), None); // Inserts node to the unique nodes collection.
                 self.collect_edges(node); // collect the node's edges
                 None
             } else { // else if the node was already inserted in the collection of unique nodes (compared by id)
@@ -143,7 +144,7 @@ fn insert_nodes_in_topology_analysis() {
         assert_eq!(topology.all_nodes.get(&node.into()).expect("Wrong value assumption."), &CollidingNode(node));
     };
     for node in node_list.into_iter() {
-        assert_eq!(topology.unique_nodes.get(&node.id).expect("Wrong value assumption."), &node);
+        assert_eq!(topology.get_unique_node_by_id(node.id).expect("Wrong value assumption."), node);
     };
     assert_eq!(topology.collitions.len(), 0);
     assert_eq!(topology.repeated_nodes.len(), 0);
@@ -171,7 +172,12 @@ fn insert_nodes_in_topology_analysis() {
     assert_eq!(topology.edge_sum(), 8); // The number of edges has not changed.
     assert_eq!(topology.unique_nodes.len(), 6);  // The number of unique nodes has not changed.
     for node in node_list.into_iter() {
-        assert_eq!(topology.unique_nodes.get(&node.id).expect("Wrong value assumption."), &node); // The map of unique_nodes is still the original list.
+        assert_eq!(topology.get_unique_node_by_id(node.id).expect("Wrong value assumption."), node); // The map of unique_nodes is still the original list.
     };
-
+    for (from, to_list) in topology.edges.iter() {
+        for to in to_list.iter() {
+            let compare_node = topology.get_unique_node_by_id(*to).expect("Wrong value assumptions");
+            assert!(compare_node.left == Some(*from) || compare_node.right == Some(*from)); // All edges still corresponds to a node in the original node's list.
+        }
+    };
 }
