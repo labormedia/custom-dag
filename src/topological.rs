@@ -272,6 +272,7 @@ fn topological_order() {
     let node_f = Node::new(5,Some(3), Some(4));
     let node_list = [node_a, node_b, node_c, node_d, node_e, node_f];
     let ordering = Topology::sort(&node_list).expect("Wrong value assumptions.").expect("Wrong value assumptions.");
+    assert!(ordering.len() > 0);
     let mut dag = Dag::new();
     for node in ordering {
         dag.insert(node);
@@ -292,10 +293,29 @@ fn another_topological_order() {
     let node_i = Node::new(0,Some(50), Some(1));
     let node_list = [node_a, node_b, node_c, node_d, node_e, node_f, node_g, node_h, node_i];
     let ordering = Topology::sort(&node_list).expect("Wrong value assumptions.").expect("Wrong value assumptions.");
-    println!("Ordering : {:?}",ordering);
+    // println!("Ordering : {:?}",ordering);
+    assert!(ordering.len() == node_list.len());
+    assert!(ordering.len() > 0);
     let mut dag = Dag::new();
     for node in ordering {
         dag.insert(node);
     };
     assert!(dag.is_safe());
+}
+
+#[test]
+fn non_dag_topological_order() {
+    let node_a = Node::new(35,None,None);
+    let node_b = Node::new(42,Some(35),None);
+    let node_c = Node::new(32,None,Some(35));
+    let node_d = Node::new(51,Some(42), Some(0));
+    let node_e = Node::new(101,Some(32), Some(51));
+    let node_f = Node::new(52,Some(51), Some(32));
+    let node_g = Node::new(50,Some(42), None);
+    let node_h = Node::new(1,Some(50), Some(52));
+    let node_i = Node::new(0,Some(50), Some(1));
+    let node_list = [node_a, node_b, node_c, node_d, node_e, node_f, node_g, node_h, node_i];
+    let ordering = Topology::sort(&node_list).expect("Wrong value assumptions.").expect("Wrong value assumptions.");
+    assert!(ordering.len() != node_list.len());
+    println!("Ordering : {:?}",ordering);
 }
