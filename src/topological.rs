@@ -188,7 +188,7 @@ impl<T: Eq + Hash + PartialEq + Copy + std::fmt::Debug> Topology<T> {
                         }
                     } else { break ordering; };
                 };
-                Ok(Some(ordering))
+                if ordering.len() == nodes.len() { Ok(Some(ordering)) } else { Ok(None) }
             },
             None => Ok(None)
         }
@@ -315,7 +315,6 @@ fn non_dag_topological_order() {
     let node_h = Node::new(1,Some(50), Some(52));
     let node_i = Node::new(0,Some(50), Some(1));
     let node_list = [node_a, node_b, node_c, node_d, node_e, node_f, node_g, node_h, node_i];
-    let ordering = Topology::sort(&node_list).expect("Wrong value assumptions.").expect("Wrong value assumptions.");
-    assert!(ordering.len() != node_list.len());
-    println!("Ordering : {:?}",ordering);
+    let ordering = Topology::sort(&node_list).expect("Wrong value assumptions.");
+    assert_eq!(ordering, None);
 }
