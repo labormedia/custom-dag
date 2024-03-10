@@ -12,6 +12,7 @@ use std::{
 use crate::{
     Node,
     collitions::CollidingNode,
+    Dag,
 };
 
 #[derive(Debug)]
@@ -137,7 +138,7 @@ impl<T: Eq + Hash + PartialEq + Copy + std::fmt::Debug> Topology<T> {
     }
     /// Tries to build a topological sort from a list of nodes.
     /// Returns a sequence of nodes that follows a topological order if it exists, otherwise it returns None.
-    fn sort(nodes:&[Node<T>]) -> Result<Option<Vec<T>>, Box<dyn Error> > {
+    fn sort(nodes:&[Node<T>]) -> Result<Option<Vec<Node<T>>>, Box<dyn Error> > {
         let mut topology: Topology<T> = Topology::new();
         for node in nodes.iter() {
             topology.insert(*node);
@@ -156,7 +157,7 @@ impl<T: Eq + Hash + PartialEq + Copy + std::fmt::Debug> Topology<T> {
                             (node.0, node.1.in_degree())
                         })
                         .collect();
-                let mut ordering: Vec<T> = Vec::with_capacity(in_degree_map.len());
+                let mut ordering: Vec<Node<T>> = Vec::with_capacity(in_degree_map.len());
                 let ordering = loop {
                     let next_ordering: Vec<T> = in_degree_map
                         .clone()
@@ -170,7 +171,7 @@ impl<T: Eq + Hash + PartialEq + Copy + std::fmt::Debug> Topology<T> {
                         .collect();
                     if next_ordering.len() > 0 {
                         for id in next_ordering.iter() {
-                            ordering.push(*id);
+                            ordering.push(topology_for_sorting.get_unique_node_by_id(*id).ok_or(TopologicalError::WrongTopologicalAssumptions)?);
                             match topology_for_sorting.outgoing_edges.get(id) {
                                 Some(edges) => {
                                     assert!(edges.len() > 0); // if it was inserted, should have values.
@@ -270,7 +271,31 @@ fn topological_order() {
     let node_e = Node::new(4,Some(2), Some(1));
     let node_f = Node::new(5,Some(3), Some(4));
     let node_list = [node_a, node_b, node_c, node_d, node_e, node_f];
-    let ordering = Topology::sort(&node_list);
-    println!("Original list: {:?}", node_list);
-    println!("Ordered list: {:?}", ordering);
+    let ordering = Topology::sort(&node_list).expect("Wrong value assumptions.").expect("Wrong value assumptions.");
+    let mut dag = Dag::new();
+    for node in ordering {
+        dag.insert(node);
+    };
+    assert!(dag.is_safe());
+}
+
+#[test]
+fn another_topological_order() {
+    let node_a = Node::new(35,None,None);
+    let node_b = Node::new(42,Some(35),None);
+    let node_c = Node::new(32,None,Some(35));
+    let node_d = Node::new(51,Some(42), None);
+    let node_e = Node::new(101,Some(32), Some(51));
+    let node_f = Node::new(52,Some(51), Some(32));
+    let node_g = Node::new(50,Some(42), None);
+    let node_h = Node::new(1,Some(50), Some(52));
+    let node_i = Node::new(0,Some(50), Some(1));
+    let node_list = [node_a, node_b, node_c, node_d, node_e, node_f, node_g, node_h, node_i];
+    let ordering = Topology::sort(&node_list).expect("Wrong value assumptions.").expect("Wrong value assumptions.");
+    println!("Ordering : {:?}",ordering);
+    let mut dag = Dag::new();
+    for node in ordering {
+        dag.insert(node);
+    };
+    assert!(dag.is_safe());
 }
