@@ -18,15 +18,17 @@ use crate::{
 enum TopologicalError {
     Custom,
     RepeatedNodes,
-    WrongTopologicalAssumtpions
+    WrongTopologicalAssumptions
 }
+
+impl Error for TopologicalError {}
 
 impl fmt::Display for TopologicalError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Custom => write!(f, "Custom error"),
             Self::RepeatedNodes => write!(f, "The list has repeated nodes."),
-            Self::WrongTopologicalAssumtpions => write!(f, "Wrong topological assumptions."),
+            Self::WrongTopologicalAssumptions => write!(f, "Wrong topological assumptions."),
         }
     }
 }
@@ -135,13 +137,60 @@ impl<T: Eq + Hash + PartialEq + Copy + std::fmt::Debug> Topology<T> {
     }
     /// Tries to build a topological sort from a list of nodes.
     /// Returns a sequence of nodes that follows a topological order if it exists, otherwise it returns None.
-    fn sort(nodes:&[Node<T>]) -> Option<Topology<T>> {
+    fn sort(nodes:&[Node<T>]) -> Result<Option<Vec<T>>, Box<dyn Error> > {
         let mut topology: Topology<T> = Topology::new();
-        // let in_degree: HashMap<T, (usize)> nodes.iter() {
-        //     topology.insert(*node);
-        // };
-        // let incoming_degree: Option<> = if topology.collitions.len()
-        Some(topology)
+        for node in nodes.iter() {
+            topology.insert(*node);
+        };
+        let checked_topology = if topology.collitions.len() == 0
+            && topology.repeated_nodes.len() == 0
+            && topology.is_consistent()
+            { Some(&topology) } else { None };
+        match checked_topology {
+            Some(topology_for_sorting) => { // sorting algorithm
+                let mut in_degree_map: HashMap<&T,usize> =
+                    topology_for_sorting
+                        .unique_nodes
+                        .iter()
+                        .map( |node| {
+                            (node.0, node.1.in_degree())
+                        })
+                        .collect();
+                let mut ordering: Vec<T> = Vec::with_capacity(in_degree_map.len());
+                let ordering = loop {
+                    let next_ordering: Vec<T> = in_degree_map
+                        .clone()
+                        .into_iter()
+                        .filter( |(id,in_degree)| { 
+                            in_degree == &0_usize 
+                        })
+                        .map( |(id, degree)| {
+                            *id
+                        })
+                        .collect();
+                    if next_ordering.len() > 0 {
+                        for id in next_ordering.iter() {
+                            ordering.push(*id);
+                            match topology_for_sorting.outgoing_edges.get(id) {
+                                Some(edges) => {
+                                    assert!(edges.len() > 0); // if it was inserted, should have values.
+                                    for outgoing_node_id in edges {
+                                        let in_degree = in_degree_map.get_mut(outgoing_node_id).ok_or(TopologicalError::WrongTopologicalAssumptions)?;
+                                        assert!( in_degree > &mut 0 );
+                                        *in_degree -= 1;
+                                    };
+                                    Some(edges)
+                                },
+                                None => None
+                            };
+                            assert_eq!(in_degree_map.remove(id), Some(0_usize));
+                        }
+                    } else { break ordering; };
+                };
+                Ok(Some(ordering))
+            },
+            None => Ok(None)
+        }
     }
 }
 
@@ -210,4 +259,18 @@ fn insert_node_with_inexistent_references_is_inconsistent() {
     assert_eq!(topology.collitions.len(), 0);
     assert_eq!(topology.repeated_nodes.len(), 0);
     assert!(!topology.is_consistent());
+}
+
+#[test]
+fn topological_order() {
+    let node_a = Node::new(0,None,None);
+    let node_b = Node::new(1,Some(0),None);
+    let node_c = Node::new(2,None,Some(0));
+    let node_d = Node::new(3,Some(0), Some(1));
+    let node_e = Node::new(4,Some(2), Some(1));
+    let node_f = Node::new(5,Some(3), Some(4));
+    let node_list = [node_a, node_b, node_c, node_d, node_e, node_f];
+    let ordering = Topology::sort(&node_list);
+    println!("Original list: {:?}", node_list);
+    println!("Ordered list: {:?}", ordering);
 }
