@@ -246,6 +246,8 @@ impl<T: Eq + Hash + PartialEq + Copy + std::fmt::Debug> Topology<T> {
                                             if outgoing_node_path_shortest_distance < shortest_distance + 1 {
                                                 outgoing_node_path_shortest_distance = shortest_distance + 1;
                                             };
+                                        } else {
+                                            outgoing_node_path_lengths.0 = Some(shortest_distance + 1);
                                         };
                                     };
                                     if let Some(longest_distance) = node_distance.1 {
