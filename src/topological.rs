@@ -203,13 +203,13 @@ impl<T: Eq + Hash + PartialEq + Copy + std::fmt::Debug> Topology<T> {
     /// Because the algorithm assumes the first node is the starting node from which to calculate distances,
     /// it should not have incoming edges, i.e. left and right reference are None, otherwise a FirstNodeHasIncomingEdges error is returned.
     /// This methods relies on Single Source Shortest and Longest (negated) Path algorithm.
-    fn shortest_and_longest_paths(nodes:&[Node<T>]) -> Result<Option<HashMap<T, (Option<usize>, Option<usize>)>>, Box<dyn Error> > {
+    fn shortest_and_longest_paths(nodes:&[Node<T>]) -> Result<Option<HashMap<T, (Option<usize>, Option<isize>)>>, Box<dyn Error> > {
         if nodes.len() > 0 
             && ( nodes[0].left != None || nodes[0].right != None )
             {
                 return Err(Box::new(TopologicalError::FirstNodeHasIncomingEdges));
             }
-        let mut lengths_map: HashMap<T, (Option<usize>, Option<usize>)> = HashMap::new(); // HashMap for accumulating shortest and longest paths for each node in the list.
+        let mut lengths_map: HashMap<T, (Option<usize>, Option<isize>)> = HashMap::new(); // HashMap for accumulating shortest and longest paths for each node in the list.
         if let Some(topological_order) = Self::sort(nodes)? {  // This algorithm assumes that the list nodes conforms to a topological sort
             assert!(topological_order.len() == nodes.len(), "Wrong value assumptions.");  // If there exists a topological sort, it includes all unique nodes.
             let mut topology: Topology<T> = Topology::new();
@@ -241,22 +241,30 @@ impl<T: Eq + Hash + PartialEq + Copy + std::fmt::Debug> Topology<T> {
                             for node_id in edges {
                                 if let Some(outgoing_node_path_lengths) = lengths_map.get_mut(&node_id) {
                                     if let Some(shortest_distance) = node_distance.0 {
-                                        if let Some(mut outgoing_node_path_shortest_distance) = outgoing_node_path_lengths.0
-                                        {
-                                            if outgoing_node_path_shortest_distance < shortest_distance + 1 {
-                                                outgoing_node_path_shortest_distance = shortest_distance + 1;
-                                            };
-                                        } else {
-                                            outgoing_node_path_lengths.0 = Some(shortest_distance + 1);
+                                        let weight = shortest_distance + 1;
+                                        match outgoing_node_path_lengths.0 {
+                                            Some(mut outgoing_node_path_shortest_distance) => {
+                                                if outgoing_node_path_shortest_distance > weight {
+                                                    outgoing_node_path_lengths.0 = Some(weight);
+                                                };
+                                            },
+                                            None => {
+                                                outgoing_node_path_lengths.0 = Some(weight);
+                                            }
                                         };
                                     };
                                     if let Some(longest_distance) = node_distance.1 {
-                                        if let Some(mut outgoing_node_path_longest_distance) = outgoing_node_path_lengths.1
-                                        {
-                                            if outgoing_node_path_longest_distance > longest_distance + 1 {
-                                                outgoing_node_path_longest_distance = longest_distance + 1;
-                                            };
-                                        };
+                                        let weight = longest_distance + 1;
+                                        match outgoing_node_path_lengths.1 {
+                                            Some(mut outgoing_node_path_longest_distance) => {
+                                                if outgoing_node_path_longest_distance < weight {
+                                                    outgoing_node_path_lengths.1 = Some(weight);
+                                                };
+                                            },
+                                            None => {
+                                                outgoing_node_path_lengths.1 = Some(weight);
+                                            }
+                                        }
                                     };
                                 } else {
                                     return Err(Box::new(TopologicalError::WrongTopologicalAssumptions));
@@ -411,6 +419,26 @@ fn shortest_and_longest_paths() {
     let node_e = Node::new(6, Some(3), Some(3));
     let Ok(Some(sorted)) = Topology::sort(&[node_prime, node_a, node_b, node_c, node_d, node_e]) else { panic!("Wrong topological assumptions for this test data.") };
     let Ok(Some(shortest_and_longest)) = Topology::shortest_and_longest_paths(&sorted) else { panic!("Wrong topological assumptions for this test data.") };
-    let printable: Vec<(&u32, &(Option<usize>, Option<usize>))> = shortest_and_longest.iter().collect();
+    let printable: Vec<(&u32, &(Option<usize>, Option<isize>))> = shortest_and_longest.iter().collect();
     println!("shortest and longest : {:?}", printable);
+}
+
+#[test]
+fn another_shortest_and_longest_paths() {
+    let node_a = Node::new(35,None,None);
+    let node_b = Node::new(42,Some(35),None);
+    let node_c = Node::new(32,None,Some(35));
+    let node_d = Node::new(51,Some(42), None);
+    let node_e = Node::new(101,Some(32), Some(51));
+    let node_f = Node::new(52,Some(51), Some(101));
+    let node_g = Node::new(50,Some(42), None);
+    let node_h = Node::new(1,Some(72), Some(52));
+    let node_i = Node::new(0,Some(50), Some(1));
+    let node_j = Node::new(333,Some(50), Some(101));
+    let node_k = Node::new(72, Some(35), Some(50));
+    let node_list = [node_a, node_b, node_c, node_d, node_e, node_f, node_g, node_h, node_i, node_j, node_k];
+    let Ok(Some(sorted)) = Topology::sort(&node_list) else { panic!("Wrong topological assumptions for this test data.") };
+    let Ok(Some(shortest_and_longest)) = Topology::shortest_and_longest_paths(&sorted) else { panic!("Wrong topological assumptions for this test data.") };
+    let printable: Vec<(&u32, &(Option<usize>, Option<isize>))> = shortest_and_longest.iter().collect();
+    println!("another shortest and longest : {:?}", printable);
 }
