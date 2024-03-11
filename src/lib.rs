@@ -11,7 +11,7 @@ use core::{
 /// This module includes the code necessary for node collition analysis when manipulating the DAG structure.
 pub mod collitions;
 /// This modules includes the helpers necessary for topological analysis of dag structure.
-mod topological;
+pub mod topological;
 use collitions::CollidingNode;
 
 /// Custom Node struct.

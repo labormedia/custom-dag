@@ -19,7 +19,9 @@ use crate::{
 enum TopologicalError {
     Custom,
     RepeatedNodes,
-    WrongTopologicalAssumptions
+    WrongTopologicalAssumptions,
+    NotADag,
+    FirstNodeHasIncomingEdges,
 }
 
 impl Error for TopologicalError {}
@@ -30,6 +32,8 @@ impl fmt::Display for TopologicalError {
             Self::Custom => write!(f, "Custom error"),
             Self::RepeatedNodes => write!(f, "The list has repeated nodes."),
             Self::WrongTopologicalAssumptions => write!(f, "Wrong topological assumptions."),
+            Self::NotADag => write!(f, "Provided list does not conform to a DAG."),
+            Self::FirstNodeHasIncomingEdges => write!(f, "List assumptions are not met, i.e. first node should not have incoming edges.")
         }
     }
 }
@@ -44,7 +48,9 @@ pub struct Topology<T: Eq + Hash + PartialEq + Copy + std::fmt::Debug> {
     outgoing_edges: HashMap<T, Vec<T>>,
 }
 
+/// Implements
 impl<T: Eq + Hash + PartialEq + Copy + std::fmt::Debug> Topology<T> {
+    /// New Topology layout.
     fn new() -> Topology<T> {
         Topology {
             all_nodes: HashSet::new(),
@@ -188,9 +194,83 @@ impl<T: Eq + Hash + PartialEq + Copy + std::fmt::Debug> Topology<T> {
                         }
                     } else { break ordering; };
                 };
-                if ordering.len() == nodes.len() { Ok(Some(ordering)) } else { Ok(None) }
+                if ordering.len() == topology_for_sorting.unique_nodes.len() { Ok(Some(ordering)) } else { Ok(None) }
             },
             None => Ok(None)
+        }
+    }
+    /// Calculates the shortest and longest paths from a list of nodes from the *first* node of the list.
+    /// Because the algorithm assumes the first node is the starting node from which to calculate distances,
+    /// it should not have incoming edges, i.e. left and right reference are None, otherwise a FirstNodeHasIncomingEdges error is returned.
+    /// This methods relies on Single Source Shortest and Longest (negated) Path algorithm.
+    fn shortest_and_longest_paths(nodes:&[Node<T>]) -> Result<Option<HashMap<T, (Option<usize>, Option<usize>)>>, Box<dyn Error> > {
+        if nodes.len() > 0 
+            && ( nodes[0].left != None || nodes[0].right != None )
+            {
+                return Err(Box::new(TopologicalError::FirstNodeHasIncomingEdges));
+            }
+        let mut lengths_map: HashMap<T, (Option<usize>, Option<usize>)> = HashMap::new(); // HashMap for accumulating shortest and longest paths for each node in the list.
+        if let Some(topological_order) = Self::sort(nodes)? {  // This algorithm assumes that the list nodes conforms to a topological sort
+            assert!(topological_order.len() == nodes.len(), "Wrong value assumptions.");  // If there exists a topological sort, it includes all unique nodes.
+            let mut topology: Topology<T> = Topology::new();
+            for node in nodes.iter() {
+                topology.insert(*node);
+                lengths_map.insert(node.id, (None, None));  // initiates lengths as None for all nodes in the list.
+            };
+            let mut outgoing_edges = // instantiates a variable with the outgoing edges of all nodes.
+                if nodes[0] == topological_order[0] // This assumption relies on the sorting algorithm.
+                && topology.collitions.len() == 0
+                && topology.repeated_nodes.len() == 0
+                && topology.unique_nodes.len() == nodes.len()
+                && topology.is_consistent()
+                {
+                    topology.outgoing_edges
+                } else {
+                    return Err(Box::new(TopologicalError::WrongTopologicalAssumptions));
+                };
+            if topological_order[0] == nodes[0] {
+                assert_eq!(lengths_map.insert(nodes[0].id, (Some(0),Some(0))), Some((None, None))); // all nodes have been initiated in lengths_map previously with value (None, None)
+            };
+
+            let mut reverse_topological_order: Vec<&Node<T>> = topological_order.iter().rev().collect(); // The topological order is reversed to iterate over the last element in the memory layout of the vector.
+            let nodes_length = loop {
+                if let Some(last_node_from_reverse_topological_order) = reverse_topological_order.pop() {
+                    let node_distance = &lengths_map.get(&last_node_from_reverse_topological_order.id).expect("Wrong topological assumptions.").clone(); // all nodes have been inserted to lengths_map previously at this stage.
+                    match outgoing_edges.remove(&last_node_from_reverse_topological_order.id) {
+                        Some(edges) => {
+                            for node_id in edges {
+                                if let Some(outgoing_node_path_lengths) = lengths_map.get_mut(&node_id) {
+                                    if let Some(shortest_distance) = node_distance.0 {
+                                        if let Some(mut outgoing_node_path_shortest_distance) = outgoing_node_path_lengths.0
+                                        {
+                                            if outgoing_node_path_shortest_distance < shortest_distance + 1 {
+                                                outgoing_node_path_shortest_distance = shortest_distance + 1;
+                                            };
+                                        };
+                                    };
+                                    if let Some(longest_distance) = node_distance.1 {
+                                        if let Some(mut outgoing_node_path_longest_distance) = outgoing_node_path_lengths.1
+                                        {
+                                            if outgoing_node_path_longest_distance > longest_distance + 1 {
+                                                outgoing_node_path_longest_distance = longest_distance + 1;
+                                            };
+                                        };
+                                    };
+                                } else {
+                                    return Err(Box::new(TopologicalError::WrongTopologicalAssumptions));
+                                }
+                            }
+                        },
+                        None => {}
+                    }
+                } else {
+                    break lengths_map;
+                }
+
+            };
+            Ok(Some(nodes_length))
+        } else {
+            Ok(None)
         }
     }
 }
@@ -317,4 +397,18 @@ fn non_dag_topological_order() {
     let node_list = [node_a, node_b, node_c, node_d, node_e, node_f, node_g, node_h, node_i];
     let ordering = Topology::sort(&node_list).expect("Wrong value assumptions.");
     assert_eq!(ordering, None);
+}
+
+#[test]
+fn shortest_and_longest_paths() {
+    let node_prime = Node::new(1, None, None);
+    let node_a = Node::new(2, Some(1), Some(1));
+    let node_b = Node::new(3, Some(1), Some(2));
+    let node_c = Node::new(4, Some(2), Some(2));
+    let node_d = Node::new(5, Some(3), Some(6));
+    let node_e = Node::new(6, Some(3), Some(3));
+    let Ok(Some(sorted)) = Topology::sort(&[node_prime, node_a, node_b, node_c, node_d, node_e]) else { panic!("Wrong topological assumptions for this test data.") };
+    let Ok(Some(shortest_and_longest)) = Topology::shortest_and_longest_paths(&sorted) else { panic!("Wrong topological assumptions for this test data.") };
+    let printable: Vec<(&u32, &(Option<usize>, Option<usize>))> = shortest_and_longest.iter().collect();
+    println!("shortest and longest : {:?}", printable);
 }
