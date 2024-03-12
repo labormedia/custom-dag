@@ -28,5 +28,5 @@ fn main() {
     let Ok(Some(sorted)) = Topology::sort(&nodes_vector) else { panic!("Wrong topological assumptions for this test data.") };
     let Ok(Some(shortest_and_longest)) = Topology::shortest_and_longest_paths(&sorted) else { panic!("Wrong topological assumptions for this test data.") };
     let printable: Vec<(&u32, &(Option<usize>, Option<isize>))> = shortest_and_longest.iter().collect();
-    println!("another shortest and longest : {:?}", printable);
+    println!("Shortes and longest path sizes : {:?}", printable);
 }
