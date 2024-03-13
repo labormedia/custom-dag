@@ -7,8 +7,8 @@
   <script src='../pkg/wasm_binding.js'></script>
   <script>
     window.addEventListener('load', async () => {
-      await wasm_bindgen('./pkg/wasm_binding_bg.wasm');
-      const add = wasm_bindgen.add(1,2)
+      await wasm_bindgen('../pkg/wasm_binding_bg.wasm');
+      const add = wasm_bindgen.add(5,2)
       console.log(add)
     });
   </script>
