@@ -1,0 +1,16 @@
+<html>
+<head>
+  <meta content="text/html;charset=utf-8" http-equiv="Content-Type" />
+</head>
+<body>
+  <!-- Include bindings --> 
+  <script src='../pkg/wasm_binding.js'></script>
+  <script>
+    window.addEventListener('load', async () => {
+      await wasm_bindgen('./pkg/wasm_binding_bg.wasm');
+      const add = wasm_bindgen.add(1,2)
+      console.log(add)
+    });
+  </script>
+</body>
+</html>
