@@ -83,6 +83,21 @@ impl<T: Eq + Hash + PartialEq + Copy + std::fmt::Debug> Topology<T> {
             Some(node.into()) // return the colliding node
         }
     }
+    /// Constructs a topology from a slice of nodes.
+    /// If a consistent DAG topology can be constructed, 
+    /// it returns and Option with the topology,
+    /// otherwise it returns None.
+    fn from_slice(node_list:&[Node<T>]) -> Option<Self> {
+        let mut topology = Topology::new();
+        for node in node_list {
+            topology.insert(*node);
+        };
+        if topology.is_consistent() {
+            Some(topology)
+        } else {
+            None
+        }
+    }
     fn collect_repeated_node(&mut self, node: Node<T>) {
         if let Some(repeated_nodes_set) = self.repeated_nodes.get_mut(&node.id) { // if the set of repeated nodes is already created for this node.id
             repeated_nodes_set.insert(node.into());  // insert the node into the collection of repeated nodes
@@ -114,6 +129,9 @@ impl<T: Eq + Hash + PartialEq + Copy + std::fmt::Debug> Topology<T> {
             },
         };
     }
+    fn get_outgoing_edges_by_id(&self, id: T) -> Option<&Vec<T>> {
+        self.outgoing_edges.get(&id)
+    }
     fn edge_sum(&self) -> usize {
         self
             .outgoing_edges
@@ -144,7 +162,7 @@ impl<T: Eq + Hash + PartialEq + Copy + std::fmt::Debug> Topology<T> {
     }
     /// Tries to build a topological sort from a list of nodes.
     /// Returns a sequence of nodes that follows a topological order if it exists, otherwise it returns None.
-    fn sort(nodes:&[Node<T>]) -> Result<Option<Vec<Node<T>>>, Box<dyn Error> > {
+    pub fn sort(nodes:&[Node<T>]) -> Result<Option<Vec<Node<T>>>, Box<dyn Error> > {
         let mut topology: Topology<T> = Topology::new();
         for node in nodes.iter() {
             topology.insert(*node);
@@ -203,13 +221,17 @@ impl<T: Eq + Hash + PartialEq + Copy + std::fmt::Debug> Topology<T> {
     /// Because the algorithm assumes the first node is the starting node from which to calculate distances,
     /// it should not have incoming edges, i.e. left and right reference are None, otherwise a FirstNodeHasIncomingEdges error is returned.
     /// This methods relies on Single Source Shortest and Longest (negated) Path algorithm.
-    fn shortest_and_longest_paths(nodes:&[Node<T>]) -> Result<Option<HashMap<T, (Option<usize>, Option<isize>)>>, Box<dyn Error> > {
-        if nodes.len() > 0 
-            && ( nodes[0].left != None || nodes[0].right != None )
+    pub fn shortest_and_longest_paths(nodes:&[Node<T>]) -> Result<Option<HashMap<T, (Option<usize>, Option<usize>)>>, Box<dyn Error> > {
+        if nodes.len() > 0  {
+            if nodes[0].left != None || nodes[0].right != None
             {
                 return Err(Box::new(TopologicalError::FirstNodeHasIncomingEdges));
             }
-        let mut lengths_map: HashMap<T, (Option<usize>, Option<isize>)> = HashMap::new(); // HashMap for accumulating shortest and longest paths for each node in the list.
+        } else 
+        {
+            return Ok(None); // list is empty.
+        };
+        let mut lengths_map: HashMap<T, (Option<usize>, Option<usize>)> = HashMap::new(); // HashMap for accumulating shortest and longest paths for each node in the list.
         if let Some(topological_order) = Self::sort(nodes)? {  // This algorithm assumes that the list nodes conforms to a topological sort
             assert!(topological_order.len() == nodes.len(), "Wrong value assumptions.");  // If there exists a topological sort, it includes all unique nodes.
             let mut topology: Topology<T> = Topology::new();
@@ -243,7 +265,7 @@ impl<T: Eq + Hash + PartialEq + Copy + std::fmt::Debug> Topology<T> {
                                     if let Some(shortest_distance) = node_distance.0 {
                                         let weight = shortest_distance + 1;
                                         match outgoing_node_path_lengths.0 {
-                                            Some(mut outgoing_node_path_shortest_distance) => {
+                                            Some(outgoing_node_path_shortest_distance) => {
                                                 if outgoing_node_path_shortest_distance > weight {
                                                     outgoing_node_path_lengths.0 = Some(weight);
                                                 };
@@ -256,7 +278,7 @@ impl<T: Eq + Hash + PartialEq + Copy + std::fmt::Debug> Topology<T> {
                                     if let Some(longest_distance) = node_distance.1 {
                                         let weight = longest_distance + 1;
                                         match outgoing_node_path_lengths.1 {
-                                            Some(mut outgoing_node_path_longest_distance) => {
+                                            Some(outgoing_node_path_longest_distance) => {
                                                 if outgoing_node_path_longest_distance < weight {
                                                     outgoing_node_path_lengths.1 = Some(weight);
                                                 };
@@ -282,6 +304,32 @@ impl<T: Eq + Hash + PartialEq + Copy + std::fmt::Debug> Topology<T> {
         } else {
             Ok(None)
         }
+    }
+    /// Breath-First Search returns threads upto all nodes starting from the origin 
+    /// marked as the first node id from which the iteration of this algorithm started from, i.e. first call arguments.
+    fn bfs_visit<'a>(topology: &Self, id: T, backtrace: &mut Vec<T>, paths_collection: &mut Vec<Vec<T>>) {
+        match topology.get_outgoing_edges_by_id(id) {
+            Some(edges) => {
+                if backtrace.len() == 0 {
+                    backtrace.push(id);
+                };
+                for node_id in edges {
+                    let mut new_thread = backtrace.clone();
+                    new_thread.push(*node_id);
+                    paths_collection.push(new_thread.clone());
+                    Self::bfs_visit(topology, *node_id, &mut new_thread, paths_collection);
+                };
+            },
+            None => { // If there is no listed edges for this node id, then it is supposed to be a last node in the thread.
+
+            }
+        };
+    }
+    pub fn bfs_all_paths(topology: &Self, id: T) -> Option<Vec<Vec<T>>> {
+        let mut collection: Vec<Vec<T>> = Vec::new();
+        let empty_vector = &mut Vec::new();
+        Topology::bfs_visit(&topology, id, empty_vector, &mut collection);
+        Some(collection)
     }
 }
 
@@ -419,8 +467,8 @@ fn shortest_and_longest_paths() {
     let node_e = Node::new(6, Some(3), Some(3));
     let Ok(Some(sorted)) = Topology::sort(&[node_prime, node_a, node_b, node_c, node_d, node_e]) else { panic!("Wrong topological assumptions for this test data.") };
     let Ok(Some(shortest_and_longest)) = Topology::shortest_and_longest_paths(&sorted) else { panic!("Wrong topological assumptions for this test data.") };
-    let printable: Vec<(&u32, &(Option<usize>, Option<isize>))> = shortest_and_longest.iter().collect();
-    println!("shortest and longest : {:?}", printable);
+    let printable: Vec<(&u32, &(Option<usize>, Option<usize>))> = shortest_and_longest.iter().collect();
+    // println!("shortest and longest : {:?}", printable);
 }
 
 #[test]
@@ -439,6 +487,44 @@ fn another_shortest_and_longest_paths() {
     let node_list = [node_a, node_b, node_c, node_d, node_e, node_f, node_g, node_h, node_i, node_j, node_k];
     let Ok(Some(sorted)) = Topology::sort(&node_list) else { panic!("Wrong topological assumptions for this test data.") };
     let Ok(Some(shortest_and_longest)) = Topology::shortest_and_longest_paths(&sorted) else { panic!("Wrong topological assumptions for this test data.") };
-    let printable: Vec<(&u32, &(Option<usize>, Option<isize>))> = shortest_and_longest.iter().collect();
-    println!("another shortest and longest : {:?}", printable);
+    let printable: Vec<(&u32, &(Option<usize>, Option<usize>))> = shortest_and_longest.iter().collect();
+    // println!("another shortest and longest : {:?}", printable);
+}
+
+#[test]
+fn bfs_threads() {
+    let node_prime = Node::new(1, None, None);
+    let node_a = Node::new(2, Some(1), Some(1));
+    let node_b = Node::new(3, Some(1), Some(2));
+    let node_c = Node::new(4, Some(2), Some(2));
+    let node_d = Node::new(5, Some(3), Some(6));
+    let node_e = Node::new(6, Some(3), Some(3));
+    let node_list = &[node_prime, node_a, node_b, node_c, node_d, node_e];
+    let Some(topology) = Topology::from_slice(node_list) else { panic!("Wrong topological assumptions for this test data.") };
+
+    let Some(bfs_all_paths) = Topology::bfs_all_paths(&topology, node_prime.id) else { panic!("Wrong topological assumptions for this test data.") };;
+    let all_paths_size_sum: usize = bfs_all_paths.iter().map(|path| { path.len() }).sum();
+    let average_node_size = all_paths_size_sum as f32/bfs_all_paths.len() as f32;
+    assert_eq!(bfs_all_paths.len(), 24);
+    assert_eq!(all_paths_size_sum, 85);
+    assert_eq!((average_node_size*10_000.0).round(), 35417.0); // compares truncated significant
+}
+
+#[test]
+fn bfs_threads_no_double_edges() {
+    let node_prime = Node::new(1, None, None);
+    let node_a = Node::new(2, Some(1), None);
+    let node_b = Node::new(3, Some(1), Some(2));
+    let node_c = Node::new(4, Some(2), None);
+    let node_d = Node::new(5, Some(3), Some(6));
+    let node_e = Node::new(6, Some(3), None);
+    let node_list = &[node_prime, node_a, node_b, node_c, node_d, node_e];
+    let Some(topology) = Topology::from_slice(node_list) else { panic!("Wrong topological assumptions for this test data.") };
+
+    let Some(bfs_all_paths) = Topology::bfs_all_paths(&topology, node_prime.id) else { panic!("Wrong topological assumptions for this test data.") };;
+    let all_paths_size_sum: usize = bfs_all_paths.iter().map(|path| { path.len() }).sum();
+    let average_node_size = all_paths_size_sum as f32/bfs_all_paths.len() as f32;
+    assert_eq!(bfs_all_paths.len(), 10);
+    assert_eq!(all_paths_size_sum, 33);
+    assert_eq!((average_node_size*10_000.0).round(), 33000.0); // compares truncated significant
 }
