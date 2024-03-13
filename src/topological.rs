@@ -45,7 +45,7 @@ pub struct Topology<T: Eq + Hash + PartialEq + Copy + std::fmt::Debug> {
     unique_nodes: HashMap<T, Node<T>>,
     collitions: HashSet<CollidingNode<T>>,
     repeated_nodes: HashMap<T, HashSet<CollidingNode<T>>>,
-    outgoing_edges: HashMap<T, Vec<T>>,
+    pub outgoing_edges: HashMap<T, Vec<T>>,
 }
 
 /// Implements
@@ -87,7 +87,7 @@ impl<T: Eq + Hash + PartialEq + Copy + std::fmt::Debug> Topology<T> {
     /// If a consistent DAG topology can be constructed, 
     /// it returns and Option with the topology,
     /// otherwise it returns None.
-    fn from_slice(node_list:&[Node<T>]) -> Option<Self> {
+    pub fn from_slice(node_list:&[Node<T>]) -> Option<Self> {
         let mut topology = Topology::new();
         for node in node_list {
             topology.insert(*node);
@@ -526,5 +526,5 @@ fn bfs_threads_no_double_edges() {
     let average_node_size = all_paths_size_sum as f32/bfs_all_paths.len() as f32;
     assert_eq!(bfs_all_paths.len(), 10);
     assert_eq!(all_paths_size_sum, 33);
-    assert_eq!((average_node_size*10_000.0).round(), 33000.0); // compares truncated significant
+    assert_eq!((average_node_size*10_000.0).round(), 33_000.0); // compares truncated significant
 }

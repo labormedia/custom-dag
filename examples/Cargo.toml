@@ -1,5 +1,7 @@
 [workspace]
 resolver = "2"
-members = [ "dag-stats",
-    "hello-dag",
+members = [ 
+    "dag-stats",
+    "hello-dag", 
+    "wasm-binding",
 ]
