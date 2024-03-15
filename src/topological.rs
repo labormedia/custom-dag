@@ -469,7 +469,7 @@ fn shortest_and_longest_paths() {
     let node_e = Node::new(6, Some(3), Some(3));
     let Ok(Some(sorted)) = Topology::sort(&[node_prime, node_a, node_b, node_c, node_d, node_e]) else { panic!("Invalid topological assumptions for this test data.") };
     let Ok(Some(shortest_and_longest)) = Topology::shortest_and_longest_paths(&sorted) else { panic!("Invalid topological assumptions for this test data.") };
-    let printable: Vec<(&u32, &(Option<usize>, Option<usize>))> = shortest_and_longest.iter().collect();
+    let _printable: Vec<(&u32, &(Option<usize>, Option<usize>))> = shortest_and_longest.iter().collect();
     // println!("shortest and longest : {:?}", printable);
 }
 
@@ -489,7 +489,7 @@ fn another_shortest_and_longest_paths() {
     let node_list = [node_a, node_b, node_c, node_d, node_e, node_f, node_g, node_h, node_i, node_j, node_k];
     let Ok(Some(sorted)) = Topology::sort(&node_list) else { panic!("Invalid topological assumptions for this test data.") };
     let Ok(Some(shortest_and_longest)) = Topology::shortest_and_longest_paths(&sorted) else { panic!("Invalid topological assumptions for this test data.") };
-    let printable: Vec<(&u32, &(Option<usize>, Option<usize>))> = shortest_and_longest.iter().collect();
+    let _printable: Vec<(&u32, &(Option<usize>, Option<usize>))> = shortest_and_longest.iter().collect();
     // println!("another shortest and longest : {:?}", printable);
 }
 
@@ -504,7 +504,7 @@ fn bfs_threads() {
     let node_list = &[node_prime, node_a, node_b, node_c, node_d, node_e];
     let Some(topology) = Topology::from_slice(node_list) else { panic!("Invalid topological assumptions for this test data.") };
 
-    let Some(bfs_all_paths) = Topology::bfs_all_paths(&topology, node_prime.id) else { panic!("Invalid topological assumptions for this test data.") };;
+    let Some(bfs_all_paths) = Topology::bfs_all_paths(&topology, node_prime.id) else { panic!("Invalid topological assumptions for this test data.") };
     let all_paths_size_sum: usize = bfs_all_paths.iter().map(|path| { path.len() }).sum();
     let average_node_size = all_paths_size_sum as f32/bfs_all_paths.len() as f32;
     assert_eq!(bfs_all_paths.len(), 24);
@@ -523,7 +523,7 @@ fn bfs_threads_no_double_edges() {
     let node_list = &[node_prime, node_a, node_b, node_c, node_d, node_e];
     let Some(topology) = Topology::from_slice(node_list) else { panic!("Invalid topological assumptions for this test data.") };
 
-    let Some(bfs_all_paths) = Topology::bfs_all_paths(&topology, node_prime.id) else { panic!("Invalid topological assumptions for this test data.") };;
+    let Some(bfs_all_paths) = Topology::bfs_all_paths(&topology, node_prime.id) else { panic!("Invalid topological assumptions for this test data.") };
     let all_paths_size_sum: usize = bfs_all_paths.iter().map(|path| { path.len() }).sum();
     let average_node_size = all_paths_size_sum as f32/bfs_all_paths.len() as f32;
     assert_eq!(bfs_all_paths.len(), 10);
