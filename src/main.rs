@@ -37,7 +37,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let all_paths_size_sum: usize = bfs_all_paths.iter().map(|path| { path.len() }).sum();
     let average_node_size = all_paths_size_sum as f32/bfs_all_paths.len() as f32;
 
-    println!("Shortest and longest path sizes : {:?}", shortest_and_longest);
+    // println!("Shortest and longest path sizes : {:?}", shortest_and_longest);
 
     let outdegree = topology
         .outgoing_edges
@@ -78,6 +78,6 @@ fn main() -> Result<(), Box<dyn Error>> {
     println!("AVG LONG DAG DEPTH: {average_longest_depth}");
     println!("NUMBER OF ALL PATHS {}", bfs_all_paths.len());
     println!("AVG NODES PER PATH {average_node_size}");
-    println!("Outdegree nodes {outdegree_nodes} {outdegree_sum}");
+    // println!("Outdegree nodes {outdegree_nodes} {outdegree_sum}");
     Ok(())
 }

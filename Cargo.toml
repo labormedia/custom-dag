@@ -1,6 +1,6 @@
 [package]
 name = "custom-dag"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Diego Correa Tristain <algoritmia@labormedia.cl>"]
 edition = "2021"
 

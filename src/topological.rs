@@ -48,7 +48,8 @@ pub struct Topology<T: Eq + Hash + PartialEq + Copy + std::fmt::Debug> {
     pub outgoing_edges: HashMap<T, Vec<T>>,
 }
 
-/// Implements
+/// Implements Topology struct.
+#[allow(dead_code)]
 impl<T: Eq + Hash + PartialEq + Copy + std::fmt::Debug> Topology<T> {
     /// New Topology layout.
     fn new() -> Topology<T> {
@@ -136,7 +137,7 @@ impl<T: Eq + Hash + PartialEq + Copy + std::fmt::Debug> Topology<T> {
         self
             .outgoing_edges
             .iter()
-            .map(|(from, list)| { list.len() })
+            .map(|(_from, list)| { list.len() })
             .sum()
     }
     fn get_unique_node_by_id(&self, id:T) -> Option<Node<T>> {
@@ -186,10 +187,10 @@ impl<T: Eq + Hash + PartialEq + Copy + std::fmt::Debug> Topology<T> {
                     let next_ordering: Vec<T> = in_degree_map
                         .clone()
                         .into_iter()
-                        .filter( |(id,in_degree)| { 
+                        .filter( |(_id,in_degree)| { 
                             in_degree == &0_usize 
                         })
-                        .map( |(id, degree)| {
+                        .map( |(id, _degree)| {
                             *id
                         })
                         .collect();
@@ -325,6 +326,7 @@ impl<T: Eq + Hash + PartialEq + Copy + std::fmt::Debug> Topology<T> {
             }
         };
     }
+    /// Evaluates all possible paths in the dag from a base node given by id in the argument, to all the other nodes in the dag.
     pub fn bfs_all_paths(topology: &Self, id: T) -> Option<Vec<Vec<T>>> {
         let mut collection: Vec<Vec<T>> = Vec::new();
         let empty_vector = &mut Vec::new();

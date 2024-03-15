@@ -1,5 +1,35 @@
+#![allow(unused_imports)]
+#![allow(dead_code)]
 //! Custom-dag is a general purpose directed acyclic graph analyzer written entirely on Rust.
 //! # How to use
+//! ```
+//! use custom_dag::{
+//!    Node,
+//!    collitions::CollidingNode,
+//!    Dag,
+//! };
+//! let node_a = Node::new(0,None,None);
+//! let node_b = Node::new(1,Some(0),None);
+//! let node_c = Node::new(2,None,Some(0));
+//! let node_d = Node::new(3,Some(0), Some(1));
+//! let node_e = Node::new(4,Some(2), Some(1));
+//! let node_f = Node::new(5,Some(3), Some(4));
+//! let node_list = [node_a, node_b, node_c, node_d, node_e, node_f];
+//! let ordering = Topology::sort(&node_list).unwrap().unwrap();
+//! assert!(ordering.len() > 0);
+//! let mut dag = Dag::new();
+//! for node in ordering {
+//!     dag.insert(node);
+//! };
+//! assert!(dag.is_safe());
+//! 
+//!```
+//! # Examples
+//! Examples are provided in the examples directory:
+//! - hello-dag
+//! - dag-stats
+//! - wasm-binding
+
 use std::collections::{
     HashMap,
     HashSet,
@@ -11,12 +41,14 @@ use core::{
 /// This module includes the code necessary for node collition analysis when manipulating the DAG structure.
 pub mod collitions;
 /// This modules includes the helpers necessary for topological analysis of dag structure.
+#[allow(unused_imports)]
 pub mod topological;
 use collitions::CollidingNode;
 
 use serde::{Serialize, Deserialize};  // Serde is called for wasm-bindgen implementation.
 
 /// Custom Node struct.
+/// Nodes makes no assumption about the structure of the graph they are inserted in.
 #[derive(Serialize, Deserialize)]
 #[derive(Debug, Clone, Hash, Copy)]
 pub struct Node<T: Eq + Hash + PartialEq + Copy> {
@@ -35,7 +67,8 @@ impl<T: Eq + Hash + PartialEq + Copy> Eq for Node<T> {}
 
 impl<T: Eq + Hash + PartialEq + Copy> Node<T> {
     /// The Node itself can be self-referential and makes no assumptions about the structure of the graph.
-    /// Nodes define two ancestors by their id defined in left and right fields of same type as the id of the node itself.
+    /// Nodes define two ancestors by their id defined in left and right fields of same type as an option containing the id, i.e. `Some(id)`, of the node being referenced.
+    /// If that branch does not references any node, the value can take the value `Option::<T>::None`.
     pub fn new(id: T, left: Option<T>, right: Option<T>) -> Self {
         Node {
             id,
@@ -43,6 +76,7 @@ impl<T: Eq + Hash + PartialEq + Copy> Node<T> {
             right,
         }
     }
+    /// Compares the equality of all fields from the base node to the reference of other node presented as the argument.
     pub fn has_same_fields_to(&self, node: &Node<T>) -> bool {
         self.id == node.id
         &&
@@ -50,6 +84,7 @@ impl<T: Eq + Hash + PartialEq + Copy> Node<T> {
         &&
         self.right == node.right
     }
+    /// Counts non `None` references of the node.
     pub fn in_degree(&self) -> usize {
         let mut in_degree: usize = 0;
         if self.left != None { in_degree += 1 };
@@ -67,7 +102,7 @@ pub struct Dag<T: Eq + Hash + PartialEq + Copy> {
 }
 
 impl<T: Eq + Hash + PartialEq + Copy + Debug> Dag<T> {
-    /// Creates a new empty Dag marked as safe (No possible cycles).
+    /// Creates a new empty Dag marked as safe.
     pub fn new() -> Self {
         Dag {
             nodes: HashMap::new(),
@@ -75,8 +110,8 @@ impl<T: Eq + Hash + PartialEq + Copy + Debug> Dag<T> {
             is_safe: true,
         }
     }
-    /// Creates a new Dag from a topological order of nodes.
-    /// If the generation is succesful (i.e. exists a topological order for the nodes list) returns true, otherwise false.
+    /// Creates a new Dag from a topological order of nodes given as a slice references of Nodes, i.e. `&[Node<T>]`.
+    /// If the generation is succesful (i.e. exists a topological order for the nodes list) returns `true`, otherwise `false`.
     pub fn from(node_list: &[Node<T>]) -> bool {
         false
     }
@@ -127,20 +162,24 @@ impl<T: Eq + Hash + PartialEq + Copy + Debug> Dag<T> {
         }
     }
     /// This method updates a node if it already exists.
-    /// If this method is used effectively, the DAG will be marked as unsafe in its is_safe field as a false value.
+    /// If this method is used effectively, the DAG will be marked as unsafe in its `is_safe` field as a `false` value.
     pub fn insert_or_update(&mut self, node: Node<T>) -> Option<Node<T>> {
         self.is_safe = false;
         self.nodes.insert(node.id, node)
     }
+    /// Searches for nodes by id and returns `true` if present in the nodes list.
     pub fn contains_id(&self, id: &T) -> bool {
         self.nodes.contains_key(id)
     }
+    /// Gets a node by id. Returns `Some(id)` if present, or `None` if not.
     pub fn get(&self, id: &T) -> Option<&Node<T>> {
         self.nodes.get(id)
     }
+    /// Returns an Option with a reference of the a HashSet of possible collitions for the list of nodes inserted.
     pub fn get_collitions(&self, id: &T) -> Option<&HashSet<CollidingNode<T>>> {
         self.possible_collitions.get(id)
     }
+    /// Gets the value of the dag safety marker.
     pub fn is_safe(&mut self) -> bool {
         if self.is_safe { true } else { false }
     }

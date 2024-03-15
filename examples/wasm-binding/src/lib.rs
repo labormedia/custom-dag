@@ -36,12 +36,14 @@ pub fn topological_order(nodes_values: JsValue) -> JsValue {
 }
 
 #[wasm_bindgen]
-pub fn shortest_and_longest_paths(nodes:&str) -> JsValue {
+pub fn shortest_and_longest_paths(nodes_values: JsValue) -> JsValue {
+    let nodes: Vec<Node<u32>> = serde_wasm_bindgen::from_value(nodes_values).expect("Invalid format.");
     0_usize.into()
 }
 
 #[wasm_bindgen]
-pub fn bfs_all_paths(nodes:&str, id: u32) -> JsValue {
+pub fn bfs_all_paths(nodes_values: JsValue, id: u32) -> JsValue {
+    let nodes: Vec<Node<u32>> = serde_wasm_bindgen::from_value(nodes_values).expect("Invalid format.");
     0_usize.into()
 }
 
