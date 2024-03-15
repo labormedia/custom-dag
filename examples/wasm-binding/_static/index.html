@@ -8,8 +8,8 @@
   <script>
     window.addEventListener('load', async () => {
       await wasm_bindgen('../pkg/wasm_binding_bg.wasm');
-      const add = wasm_bindgen.add(5,2)
-      console.log(add)
+      const node = wasm_bindgen.new_nodes(0, None, None);
+      console.log(node)
     });
   </script>
 </body>
