@@ -1,6 +1,30 @@
 # custom-dag
 Provides methods for topological analysis of directed acyclic graphs, i.e. DAG analysis.
 
+# How to use
+```
+ use custom_dag::{
+    Node,
+    collitions::CollidingNode,
+    Dag,
+ };
+ let node_a = Node::new(0,None,None);
+ let node_b = Node::new(1,Some(0),None);
+ let node_c = Node::new(2,None,Some(0));
+ let node_d = Node::new(3,Some(0), Some(1));
+ let node_e = Node::new(4,Some(2), Some(1));
+ let node_f = Node::new(5,Some(3), Some(4));
+ let node_list = [node_a, node_b, node_c, node_d, node_e, node_f];
+ let ordering = Topology::sort(&node_list).unwrap().unwrap();
+ assert!(ordering.len() > 0);
+ let mut dag = Dag::new();
+ for node in ordering {
+     dag.insert(node);
+ };
+ assert!(dag.is_safe());
+
+```
+
 # Build
 ```
 cargo build --release
