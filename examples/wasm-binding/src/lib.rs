@@ -46,14 +46,3 @@ pub fn bfs_all_paths(nodes_values: JsValue, id: u32) -> JsValue {
     let nodes: Vec<Node<u32>> = serde_wasm_bindgen::from_value(nodes_values).expect("Invalid format.");
     0_usize.into()
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
-    }
-}
