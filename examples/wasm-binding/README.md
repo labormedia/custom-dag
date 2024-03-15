@@ -1,5 +1,10 @@
 # wasm-bingen example
 
+# Install tools
+````
+npm install -g typescript
+```
+
 # Build bindings
 ```
 wasm-pack build --target nodejs
