@@ -20,10 +20,12 @@ cargo doc
 Examples are provided in the examples directory.
 There is also a main example that reads a text file and constructs a dag from the following format.
 Database template:
+```
 N # integer, number of nodes
 L R # integers describing a node, L and R = Left and Right parent
 L R # integers describing a node, L and R = Left and Right parent, etc...
 L R # integers describing a node, L and R = Left and Right parent, etc...
+```
 
 It can be run with the command:
 ```
@@ -34,3 +36,7 @@ AVG LONG DAG DEPTH: 2
 NUMBER OF ALL PATHS 24
 AVG NODES PER PATH 3.5416667
 ```
+
+# wasm-binding example
+There is a wasm-binding example for binding the topological analysis methods into typescript code.
+check `./examples/wasm-binding`
