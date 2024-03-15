@@ -42,15 +42,15 @@ fn main() -> Result<(), Box<dyn Error>> {
     let outdegree = topology
         .outgoing_edges
         .iter()
-        .map(|(id, edges)| {
+        .map(|(_id, edges)| {
             edges.len()
         });
-    let outdegree_nodes = outdegree.len();
-    let outdegree_sum: usize = outdegree.sum();
+    let _outdegree_nodes = outdegree.len();
+    let _outdegree_sum: usize = outdegree.sum();
 
     let aggregation = shortest_and_longest
         .iter_mut()
-        .map(|(id, (left, right))| {
+        .map(|(_id, (left, right))| {
             (left, right)
         })
         .fold((

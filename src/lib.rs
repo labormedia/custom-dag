@@ -112,7 +112,7 @@ impl<T: Eq + Hash + PartialEq + Copy + Debug> Dag<T> {
     }
     /// Creates a new Dag from a topological order of nodes given as a slice references of Nodes, i.e. `&[Node<T>]`.
     /// If the generation is succesful (i.e. exists a topological order for the nodes list) returns `true`, otherwise `false`.
-    pub fn from(node_list: &[Node<T>]) -> bool {
+    pub fn from(_node_list: &[Node<T>]) -> bool {
         false
     }
     /// Inserts nodes to the dag from a list.
