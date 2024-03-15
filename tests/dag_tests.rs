@@ -32,10 +32,10 @@ fn insert_existing_node_id_does_not_update() {
     assert_ne!(node_a.left, node_b.left);
     // The new node was not present in the dag, so it gets inserted in the DAG.
     assert_eq!(dag.insert(node_a), None);
-    assert!(dag.get(&node_a.id).expect("Wrong type assumption.").has_same_fields_to(&node_a));
+    assert!(dag.get(&node_a.id).expect("Invalid type assumption.").has_same_fields_to(&node_a));
     // When trying to insert a new Node<T> with the same id, it will return the present node and will deflect the insertion to the collition collection.
     // The returned value of this action is the node already prensent, with the same id.
-    let insert_result = dag.insert(node_b).expect("Wrong value assumption.");
+    let insert_result = dag.insert(node_b).expect("Invalid value assumption.");
     assert_eq!(insert_result, node_a);
     assert_eq!(insert_result.left, None);
     assert_eq!(insert_result.right, None);
@@ -49,16 +49,16 @@ fn insert_existing_node_id_does_not_update() {
         })
     );
     assert_ne!(
-        node_in_dag.expect("Wrong value assumption.").left, 
+        node_in_dag.expect("Invalid value assumption.").left, 
         node_b.left,
     );
     assert_ne!(
-        node_in_dag.expect("Wrong value assumption.").right, 
+        node_in_dag.expect("Invalid value assumption.").right, 
         node_b.right,
     );
     // Examine the DAG's collition collection.
-    let collitions: &HashSet<CollidingNode<TestType>> = dag.get_collitions(&id).expect("Wrong value assumption.");
-    let colliding_node = collitions.get(&CollidingNode::from(node_b)).expect("Wrong value assumption.");
+    let collitions: &HashSet<CollidingNode<TestType>> = dag.get_collitions(&id).expect("Invalid value assumption.");
+    let colliding_node = collitions.get(&CollidingNode::from(node_b)).expect("Invalid value assumption.");
     // The colliding node corresponds to node_b.
     assert_eq!(colliding_node, &CollidingNode::from(node_b));
     // The collitions set contains a CollidingNode that corresponds to node_b.
@@ -80,26 +80,26 @@ fn insert_existing_node_marks_dag_unsafe() {
     let mut dag = Dag::new();
     // Inserts node_a into the DAG.
     assert_eq!(dag.insert(node_a), None);
-    assert!(dag.get(&node_a.id).expect("Wrong value assumption.").has_same_fields_to(&node_a));
+    assert!(dag.get(&node_a.id).expect("Invalid value assumption.").has_same_fields_to(&node_a));
     // Dag is still marked as safe (no cycles) after first insertion.
     assert!(dag.is_safe());
     // Trying to insert a node with the id of an already inserted node collects the collition and returns the value of the previously inserted node, which will persist in the DAG.
-    assert!(dag.insert(node_b).expect("Wrong value assumption.").has_same_fields_to(&node_a));
+    assert!(dag.insert(node_b).expect("Invalid value assumption.").has_same_fields_to(&node_a));
     // Examine the DAG's collition collection.
-    let collitions: &HashSet<CollidingNode<TestType>> = dag.get_collitions(&id).expect("Wrong value assumption.");
-    let colliding_node = collitions.get(&CollidingNode::from(node_b)).expect("Wrong value assumption.");
+    let collitions: &HashSet<CollidingNode<TestType>> = dag.get_collitions(&id).expect("Invalid value assumption.");
+    let colliding_node = collitions.get(&CollidingNode::from(node_b)).expect("Invalid value assumption.");
     assert_eq!(colliding_node, &CollidingNode::from(node_b));
     assert_eq!(colliding_node, &CollidingNode::from(node_b));
 
     // Node in dag with id 0 is still node_a, but not node_b.
-    let node_in_dag = dag.get(&node_a.id).expect("Wrong value assumption.");
+    let node_in_dag = dag.get(&node_a.id).expect("Invalid value assumption.");
     assert!(node_in_dag.has_same_fields_to(&node_a));
 
     // insert_or_update updates the dag values for the node id 0 and returns the previous values, node_a. 
     // The final fields values for the node id 0 in the dag are equal to node_b but not node_a.
-    assert!(dag.insert_or_update(node_b).expect("Wrong value assumption.").has_same_fields_to(&node_a));
-    assert!(!dag.get(&node_a.id).expect("Wrong value assumption.").has_same_fields_to(&node_a));
-    assert!(dag.get(&node_a.id).expect("Wrong value assumption.").has_same_fields_to(&node_b));
+    assert!(dag.insert_or_update(node_b).expect("Invalid value assumption.").has_same_fields_to(&node_a));
+    assert!(!dag.get(&node_a.id).expect("Invalid value assumption.").has_same_fields_to(&node_a));
+    assert!(dag.get(&node_a.id).expect("Invalid value assumption.").has_same_fields_to(&node_b));
 
     assert!(!dag.is_safe());
 }

@@ -16,7 +16,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         .expect("Error reading file.");
 
     let mut enumerated_lines = contents.lines().enumerate();
-    let dag_size: usize = enumerated_lines.next().expect("Wrong file format.").1.parse()?;
+    let dag_size: usize = enumerated_lines.next().expect("Invalid file format.").1.parse()?;
     let mut nodes_list: Vec<Node<u32>> = Vec::with_capacity(dag_size);
     let root = Node::new(1, None, None);
 
@@ -24,16 +24,16 @@ fn main() -> Result<(), Box<dyn Error>> {
     for (i,node_data) in enumerated_lines {
         match node_data.split_once(" ") {
             Some((left, right)) => {
-                nodes_list.push(Node::new((i + 1) as u32, Some(left.parse().expect("Wrong file format.")), Some(right.parse()?)));
+                nodes_list.push(Node::new((i + 1) as u32, Some(left.parse().expect("Invalid file format.")), Some(right.parse()?)));
             },
             None => {}
         };
         
     }
-    let Some(sorted) = Topology::sort(&nodes_list)? else { panic!("Wrong topological assumptions for this test data.") };
-    let Ok(Some(mut shortest_and_longest)) = Topology::shortest_and_longest_paths(&sorted) else { panic!("Wrong topological assumptions for this test data.") };
-    let Some(topology) = Topology::from_slice(&nodes_list) else { panic!("Wrong topological assumptions for this test data.") };
-    let Some(bfs_all_paths) = Topology::bfs_all_paths(&topology, root.id) else { panic!("Wrong topological assumptions for this test data.") };
+    let Some(sorted) = Topology::sort(&nodes_list)? else { panic!("Invalid topological assumptions for this test data.") };
+    let Ok(Some(mut shortest_and_longest)) = Topology::shortest_and_longest_paths(&sorted) else { panic!("Invalid topological assumptions for this test data.") };
+    let Some(topology) = Topology::from_slice(&nodes_list) else { panic!("Invalid topological assumptions for this test data.") };
+    let Some(bfs_all_paths) = Topology::bfs_all_paths(&topology, root.id) else { panic!("Invalid topological assumptions for this test data.") };
     let all_paths_size_sum: usize = bfs_all_paths.iter().map(|path| { path.len() }).sum();
     let average_node_size = all_paths_size_sum as f32/bfs_all_paths.len() as f32;
 

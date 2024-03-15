@@ -14,7 +14,10 @@ pub mod collitions;
 pub mod topological;
 use collitions::CollidingNode;
 
+use serde::{Serialize, Deserialize};  // Serde is called for wasm-bindgen implementation.
+
 /// Custom Node struct.
+#[derive(Serialize, Deserialize)]
 #[derive(Debug, Clone, Hash, Copy)]
 pub struct Node<T: Eq + Hash + PartialEq + Copy> {
     pub id: T,
@@ -106,13 +109,13 @@ impl<T: Eq + Hash + PartialEq + Copy + Debug> Dag<T> {
             };
             self.nodes.get(&node.id).copied()
         } else if node.left != None
-            && !self.nodes.contains_key(&node.left.expect("Wrong type definition assumption for Node<T>."))
+            && !self.nodes.contains_key(&node.left.expect("Invalid type definition assumption for Node<T>."))
         {
             self.is_safe = false;
             assert_eq!(self.nodes.insert(node.id, node), None);
             self.nodes.get(&node.id).copied()
         } else if node.right != None 
-            && !self.nodes.contains_key(&node.right.expect("Wrong type definition assumption for Node<T>."))
+            && !self.nodes.contains_key(&node.right.expect("Invalid type definition assumption for Node<T>."))
         {
             self.is_safe = false;
             assert_eq!(self.nodes.insert(node.id, node), None);

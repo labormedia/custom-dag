@@ -19,7 +19,7 @@ use crate::{
 enum TopologicalError {
     Custom,
     RepeatedNodes,
-    WrongTopologicalAssumptions,
+    InvalidTopologicalAssumptions,
     NotADag,
     FirstNodeHasIncomingEdges,
 }
@@ -31,7 +31,7 @@ impl fmt::Display for TopologicalError {
         match self {
             Self::Custom => write!(f, "Custom error"),
             Self::RepeatedNodes => write!(f, "The list has repeated nodes."),
-            Self::WrongTopologicalAssumptions => write!(f, "Wrong topological assumptions."),
+            Self::InvalidTopologicalAssumptions => write!(f, "Invalid topological assumptions."),
             Self::NotADag => write!(f, "Provided list does not conform to a DAG."),
             Self::FirstNodeHasIncomingEdges => write!(f, "List assumptions are not met, i.e. first node should not have incoming edges.")
         }
@@ -156,8 +156,8 @@ impl<T: Eq + Hash + PartialEq + Copy + std::fmt::Debug> Topology<T> {
             .iter()
             .fold(true, |acc, node| {
                 acc &&
-                ( node.1.left == None || self.get_unique_node_by_id(node.1.left.expect("Wrong value assumption")) != None ) &&
-                ( node.1.right == None || self.get_unique_node_by_id(node.1.right.expect("Wrong value assumption")) != None )
+                ( node.1.left == None || self.get_unique_node_by_id(node.1.left.expect("Invalid value assumption")) != None ) &&
+                ( node.1.right == None || self.get_unique_node_by_id(node.1.right.expect("Invalid value assumption")) != None )
             })
     }
     /// Tries to build a topological sort from a list of nodes.
@@ -195,12 +195,12 @@ impl<T: Eq + Hash + PartialEq + Copy + std::fmt::Debug> Topology<T> {
                         .collect();
                     if next_ordering.len() > 0 {
                         for id in next_ordering.iter() {
-                            ordering.push(topology_for_sorting.get_unique_node_by_id(*id).ok_or(TopologicalError::WrongTopologicalAssumptions)?);
+                            ordering.push(topology_for_sorting.get_unique_node_by_id(*id).ok_or(TopologicalError::InvalidTopologicalAssumptions)?);
                             match topology_for_sorting.outgoing_edges.get(id) {
                                 Some(edges) => {
                                     assert!(edges.len() > 0); // if it was inserted, should have values.
                                     for outgoing_node_id in edges {
-                                        let in_degree = in_degree_map.get_mut(outgoing_node_id).ok_or(TopologicalError::WrongTopologicalAssumptions)?;
+                                        let in_degree = in_degree_map.get_mut(outgoing_node_id).ok_or(TopologicalError::InvalidTopologicalAssumptions)?;
                                         assert!( in_degree > &mut 0 );
                                         *in_degree -= 1;
                                     };
@@ -233,7 +233,7 @@ impl<T: Eq + Hash + PartialEq + Copy + std::fmt::Debug> Topology<T> {
         };
         let mut lengths_map: HashMap<T, (Option<usize>, Option<usize>)> = HashMap::new(); // HashMap for accumulating shortest and longest paths for each node in the list.
         if let Some(topological_order) = Self::sort(nodes)? {  // This algorithm assumes that the list nodes conforms to a topological sort
-            assert!(topological_order.len() == nodes.len(), "Wrong value assumptions.");  // If there exists a topological sort, it includes all unique nodes.
+            assert!(topological_order.len() == nodes.len(), "Invalid value assumptions.");  // If there exists a topological sort, it includes all unique nodes.
             let mut topology: Topology<T> = Topology::new();
             for node in nodes.iter() {
                 topology.insert(*node);
@@ -248,7 +248,7 @@ impl<T: Eq + Hash + PartialEq + Copy + std::fmt::Debug> Topology<T> {
                 {
                     topology.outgoing_edges
                 } else {
-                    return Err(Box::new(TopologicalError::WrongTopologicalAssumptions));
+                    return Err(Box::new(TopologicalError::InvalidTopologicalAssumptions));
                 };
             if topological_order[0] == nodes[0] {
                 assert_eq!(lengths_map.insert(nodes[0].id, (Some(0),Some(0))), Some((None, None))); // all nodes have been initiated in lengths_map previously with value (None, None)
@@ -257,7 +257,7 @@ impl<T: Eq + Hash + PartialEq + Copy + std::fmt::Debug> Topology<T> {
             let mut reverse_topological_order: Vec<&Node<T>> = topological_order.iter().rev().collect(); // The topological order is reversed to iterate over the last element in the memory layout of the vector.
             let nodes_length = loop {
                 if let Some(last_node_from_reverse_topological_order) = reverse_topological_order.pop() {
-                    let node_distance = &lengths_map.get(&last_node_from_reverse_topological_order.id).expect("Wrong topological assumptions.").clone(); // all nodes have been inserted to lengths_map previously at this stage.
+                    let node_distance = &lengths_map.get(&last_node_from_reverse_topological_order.id).expect("Invalid topological assumptions.").clone(); // all nodes have been inserted to lengths_map previously at this stage.
                     match outgoing_edges.remove(&last_node_from_reverse_topological_order.id) {
                         Some(edges) => {
                             for node_id in edges {
@@ -289,7 +289,7 @@ impl<T: Eq + Hash + PartialEq + Copy + std::fmt::Debug> Topology<T> {
                                         }
                                     };
                                 } else {
-                                    return Err(Box::new(TopologicalError::WrongTopologicalAssumptions));
+                                    return Err(Box::new(TopologicalError::InvalidTopologicalAssumptions));
                                 }
                             }
                         },
@@ -348,10 +348,10 @@ fn insert_nodes_in_topology_analysis() {
     };
     assert_eq!(topology.all_nodes.get(&Node::new(23, Some(42), Some(50)).into()), None);  // tries to take an inexistent node
     for node in node_list.into_iter() {
-        assert_eq!(topology.all_nodes.get(&node.into()).expect("Wrong value assumption."), &CollidingNode(node));
+        assert_eq!(topology.all_nodes.get(&node.into()).expect("Invalid value assumption."), &CollidingNode(node));
     };
     for node in node_list.into_iter() {
-        assert_eq!(topology.get_unique_node_by_id(node.id).expect("Wrong value assumption."), node);
+        assert_eq!(topology.get_unique_node_by_id(node.id).expect("Invalid value assumption."), node);
     };
     assert_eq!(topology.collitions.len(), 0);
     assert_eq!(topology.repeated_nodes.len(), 0);
@@ -360,7 +360,7 @@ fn insert_nodes_in_topology_analysis() {
     assert_eq!(topology.get_unique_node_by_id(4), Some(node_e)); // Check existence for node_e
     for (from, to_list) in topology.outgoing_edges.iter() {
         for to in to_list.iter() {
-            let compare_node = topology.get_unique_node_by_id(*to).expect("Wrong value assumptions");
+            let compare_node = topology.get_unique_node_by_id(*to).expect("Invalid value assumptions");
             assert!(compare_node.left == Some(*from) || compare_node.right == Some(*from)); // Checks that all edges corresponds to a node in the original node's list.
         }
     };
@@ -380,11 +380,11 @@ fn insert_nodes_in_topology_analysis() {
     assert_eq!(topology.edge_sum(), 8); // The number of edges has not changed.
     assert_eq!(topology.unique_nodes.len(), 6);  // The number of unique nodes has not changed.
     for node in node_list.into_iter() {
-        assert_eq!(topology.get_unique_node_by_id(node.id).expect("Wrong value assumption."), node); // The map of unique_nodes is still the original list.
+        assert_eq!(topology.get_unique_node_by_id(node.id).expect("Invalid value assumption."), node); // The map of unique_nodes is still the original list.
     };
     for (from, to_list) in topology.outgoing_edges.iter() {
         for to in to_list.iter() {
-            let compare_node = topology.get_unique_node_by_id(*to).expect("Wrong value assumptions");
+            let compare_node = topology.get_unique_node_by_id(*to).expect("Invalid value assumptions");
             assert!(compare_node.left == Some(*from) || compare_node.right == Some(*from)); // All edges still corresponds to a node in the original node's list.
         }
     };
@@ -409,7 +409,7 @@ fn topological_order() {
     let node_e = Node::new(4,Some(2), Some(1));
     let node_f = Node::new(5,Some(3), Some(4));
     let node_list = [node_a, node_b, node_c, node_d, node_e, node_f];
-    let ordering = Topology::sort(&node_list).expect("Wrong value assumptions.").expect("Wrong value assumptions.");
+    let ordering = Topology::sort(&node_list).expect("Invalid value assumptions.").expect("Invalid value assumptions.");
     assert!(ordering.len() > 0);
     let mut dag = Dag::new();
     for node in ordering {
@@ -430,7 +430,7 @@ fn another_topological_order() {
     let node_h = Node::new(1,Some(50), Some(52));
     let node_i = Node::new(0,Some(50), Some(1));
     let node_list = [node_a, node_b, node_c, node_d, node_e, node_f, node_g, node_h, node_i];
-    let ordering = Topology::sort(&node_list).expect("Wrong value assumptions.").expect("Wrong value assumptions.");
+    let ordering = Topology::sort(&node_list).expect("Invalid value assumptions.").expect("Invalid value assumptions.");
     // println!("Ordering : {:?}",ordering);
     assert!(ordering.len() == node_list.len());
     assert!(ordering.len() > 0);
@@ -453,7 +453,7 @@ fn non_dag_topological_order() {
     let node_h = Node::new(1,Some(50), Some(52));
     let node_i = Node::new(0,Some(50), Some(1));
     let node_list = [node_a, node_b, node_c, node_d, node_e, node_f, node_g, node_h, node_i];
-    let ordering = Topology::sort(&node_list).expect("Wrong value assumptions.");
+    let ordering = Topology::sort(&node_list).expect("Invalid value assumptions.");
     assert_eq!(ordering, None);
 }
 
@@ -465,8 +465,8 @@ fn shortest_and_longest_paths() {
     let node_c = Node::new(4, Some(2), Some(2));
     let node_d = Node::new(5, Some(3), Some(6));
     let node_e = Node::new(6, Some(3), Some(3));
-    let Ok(Some(sorted)) = Topology::sort(&[node_prime, node_a, node_b, node_c, node_d, node_e]) else { panic!("Wrong topological assumptions for this test data.") };
-    let Ok(Some(shortest_and_longest)) = Topology::shortest_and_longest_paths(&sorted) else { panic!("Wrong topological assumptions for this test data.") };
+    let Ok(Some(sorted)) = Topology::sort(&[node_prime, node_a, node_b, node_c, node_d, node_e]) else { panic!("Invalid topological assumptions for this test data.") };
+    let Ok(Some(shortest_and_longest)) = Topology::shortest_and_longest_paths(&sorted) else { panic!("Invalid topological assumptions for this test data.") };
     let printable: Vec<(&u32, &(Option<usize>, Option<usize>))> = shortest_and_longest.iter().collect();
     // println!("shortest and longest : {:?}", printable);
 }
@@ -485,8 +485,8 @@ fn another_shortest_and_longest_paths() {
     let node_j = Node::new(333,Some(50), Some(101));
     let node_k = Node::new(72, Some(35), Some(50));
     let node_list = [node_a, node_b, node_c, node_d, node_e, node_f, node_g, node_h, node_i, node_j, node_k];
-    let Ok(Some(sorted)) = Topology::sort(&node_list) else { panic!("Wrong topological assumptions for this test data.") };
-    let Ok(Some(shortest_and_longest)) = Topology::shortest_and_longest_paths(&sorted) else { panic!("Wrong topological assumptions for this test data.") };
+    let Ok(Some(sorted)) = Topology::sort(&node_list) else { panic!("Invalid topological assumptions for this test data.") };
+    let Ok(Some(shortest_and_longest)) = Topology::shortest_and_longest_paths(&sorted) else { panic!("Invalid topological assumptions for this test data.") };
     let printable: Vec<(&u32, &(Option<usize>, Option<usize>))> = shortest_and_longest.iter().collect();
     // println!("another shortest and longest : {:?}", printable);
 }
@@ -500,9 +500,9 @@ fn bfs_threads() {
     let node_d = Node::new(5, Some(3), Some(6));
     let node_e = Node::new(6, Some(3), Some(3));
     let node_list = &[node_prime, node_a, node_b, node_c, node_d, node_e];
-    let Some(topology) = Topology::from_slice(node_list) else { panic!("Wrong topological assumptions for this test data.") };
+    let Some(topology) = Topology::from_slice(node_list) else { panic!("Invalid topological assumptions for this test data.") };
 
-    let Some(bfs_all_paths) = Topology::bfs_all_paths(&topology, node_prime.id) else { panic!("Wrong topological assumptions for this test data.") };;
+    let Some(bfs_all_paths) = Topology::bfs_all_paths(&topology, node_prime.id) else { panic!("Invalid topological assumptions for this test data.") };;
     let all_paths_size_sum: usize = bfs_all_paths.iter().map(|path| { path.len() }).sum();
     let average_node_size = all_paths_size_sum as f32/bfs_all_paths.len() as f32;
     assert_eq!(bfs_all_paths.len(), 24);
@@ -519,9 +519,9 @@ fn bfs_threads_no_double_edges() {
     let node_d = Node::new(5, Some(3), Some(6));
     let node_e = Node::new(6, Some(3), None);
     let node_list = &[node_prime, node_a, node_b, node_c, node_d, node_e];
-    let Some(topology) = Topology::from_slice(node_list) else { panic!("Wrong topological assumptions for this test data.") };
+    let Some(topology) = Topology::from_slice(node_list) else { panic!("Invalid topological assumptions for this test data.") };
 
-    let Some(bfs_all_paths) = Topology::bfs_all_paths(&topology, node_prime.id) else { panic!("Wrong topological assumptions for this test data.") };;
+    let Some(bfs_all_paths) = Topology::bfs_all_paths(&topology, node_prime.id) else { panic!("Invalid topological assumptions for this test data.") };;
     let all_paths_size_sum: usize = bfs_all_paths.iter().map(|path| { path.len() }).sum();
     let average_node_size = all_paths_size_sum as f32/bfs_all_paths.len() as f32;
     assert_eq!(bfs_all_paths.len(), 10);

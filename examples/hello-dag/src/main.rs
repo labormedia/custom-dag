@@ -15,6 +15,6 @@ fn main() {
         let new_node = Node::new(node_id, None, None);
         println!("Created new node : {:?}", new_node);
         dag.insert(new_node);
-        println!("Inserted new node {:?} to the DAG.", dag.get(&node_id).expect("Wrong value assumption."));
+        println!("Inserted new node {:?} to the DAG.", dag.get(&node_id).expect("Invalid value assumption."));
     };
 }
