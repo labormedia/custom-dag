@@ -114,7 +114,7 @@ impl<T: Eq + Hash + PartialEq + Copy + Debug> Dag<T> {
     /// Check the safety of a given topological order creating a new Dag from a list of nodes given as a slice references of Nodes, i.e. `&[Node<T>]`.
     /// If the generation is succesful (i.e. conforms to a topological order for the nodes list) it returns `true`, otherwise `false`.
     pub fn check_topological_order(node_list: &[Node<T>]) -> bool {
-        let topology = Self::new();
+        let mut topology = Self::new();
         topology.insert_from(node_list);
         topology.is_safe()
     }
