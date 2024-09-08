@@ -88,8 +88,8 @@ impl<T: Eq + Hash + PartialEq + Copy> Node<T> {
     /// Counts non `None` references of the node.
     pub fn in_degree(&self) -> usize {
         let mut in_degree: usize = 0;
-        if self.left != None { in_degree += 1 };
-        if self.right != None { in_degree += 1 };
+        if self.left.is_some() { in_degree += 1 };
+        if self.right.is_some() { in_degree += 1 };
         in_degree
     }
 }
@@ -146,13 +146,13 @@ impl<T: Eq + Hash + PartialEq + Copy + Debug> Dag<T> {
                 },
             };
             self.nodes.get(&node.id).copied()
-        } else if node.left != None
+        } else if node.left.is_some()
             && !self.nodes.contains_key(&node.left.expect("Invalid type definition assumption for Node<T>."))
         {
             self.is_safe = false;
             assert_eq!(self.nodes.insert(node.id, node), None);
             self.nodes.get(&node.id).copied()
-        } else if node.right != None 
+        } else if node.right.is_some() 
             && !self.nodes.contains_key(&node.right.expect("Invalid type definition assumption for Node<T>."))
         {
             self.is_safe = false;
@@ -184,7 +184,7 @@ impl<T: Eq + Hash + PartialEq + Copy + Debug> Dag<T> {
     }
     /// Gets the value of the dag safety marker.
     pub fn is_safe(&mut self) -> bool {
-        if self.is_safe { true } else { false }
+        self.is_safe
     }
 }
 

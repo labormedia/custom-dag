@@ -66,7 +66,7 @@ impl<T: Eq + Hash + PartialEq + Copy + std::fmt::Debug> Topology<T> {
     /// otherwise it returns None if there is no collision.
     fn insert(&mut self, node: Node<T>) -> Option<CollidingNode<T>>{
         if self.all_nodes.insert(node.into()) { // if the node didn't existed in the collection of all nodes (compared by all fields)
-            if self.get_unique_node_by_id(node.id) == None { // if the node didn't existed in the collection of unique nodes (compared by id)
+            if self.get_unique_node_by_id(node.id).is_none() { // if the node didn't existed in the collection of unique nodes (compared by id)
                 assert_eq!(self.unique_nodes.insert(node.id, node), None); // Inserts node to the unique nodes collection.
                 self.collect_edges(node); // collect the node's edges
                 None
@@ -136,8 +136,8 @@ impl<T: Eq + Hash + PartialEq + Copy + std::fmt::Debug> Topology<T> {
     fn edge_sum(&self) -> usize {
         self
             .outgoing_edges
-            .iter()
-            .map(|(_from, list)| { list.len() })
+            .values()
+            .map(|list| { list.len() })
             .sum()
     }
     fn get_unique_node_by_id(&self, id:T) -> Option<Node<T>> {
@@ -148,17 +148,17 @@ impl<T: Eq + Hash + PartialEq + Copy + std::fmt::Debug> Topology<T> {
     /// * if all nodes references have been defined -> true
     /// * if there are no repeated nodes -> true
     /// * if there are no collitions -> true
-    /// otherwise returns false
-    /// References to itself are not considered.
+    ///   otherwise returns false
+    ///   References to itself are not considered.
     fn is_consistent(&self) -> bool {
-        self.repeated_nodes.len() == 0
-        && self.collitions.len() == 0
+        self.repeated_nodes.is_empty()
+        && self.collitions.is_empty()
         && self.unique_nodes
             .iter()
             .fold(true, |acc, node| {
                 acc &&
-                ( node.1.left == None || self.get_unique_node_by_id(node.1.left.expect("Invalid value assumption")) != None ) &&
-                ( node.1.right == None || self.get_unique_node_by_id(node.1.right.expect("Invalid value assumption")) != None )
+                ( node.1.left.is_none() || self.get_unique_node_by_id(node.1.left.expect("Invalid value assumption")).is_some() ) &&
+                ( node.1.right.is_none() || self.get_unique_node_by_id(node.1.right.expect("Invalid value assumption")).is_some() )
             })
     }
     /// Tries to build a topological sort from a list of nodes.
@@ -168,8 +168,8 @@ impl<T: Eq + Hash + PartialEq + Copy + std::fmt::Debug> Topology<T> {
         for node in nodes.iter() {
             topology.insert(*node);
         };
-        let checked_topology = if topology.collitions.len() == 0
-            && topology.repeated_nodes.len() == 0
+        let checked_topology = if topology.collitions.is_empty()
+            && topology.repeated_nodes.is_empty()
             && topology.is_consistent()
             { Some(&topology) } else { None };
         match checked_topology {
@@ -194,12 +194,12 @@ impl<T: Eq + Hash + PartialEq + Copy + std::fmt::Debug> Topology<T> {
                             *id
                         })
                         .collect();
-                    if next_ordering.len() > 0 {
+                    if !next_ordering.is_empty() {
                         for id in next_ordering.iter() {
                             ordering.push(topology_for_sorting.get_unique_node_by_id(*id).ok_or(TopologicalError::InvalidTopologicalAssumptions)?);
                             match topology_for_sorting.outgoing_edges.get(id) {
                                 Some(edges) => {
-                                    assert!(edges.len() > 0); // if it was inserted, should have values.
+                                    assert!(!edges.is_empty()); // if it was inserted, should have values.
                                     for outgoing_node_id in edges {
                                         let in_degree = in_degree_map.get_mut(outgoing_node_id).ok_or(TopologicalError::InvalidTopologicalAssumptions)?;
                                         assert!( in_degree > &mut 0 );
@@ -223,8 +223,8 @@ impl<T: Eq + Hash + PartialEq + Copy + std::fmt::Debug> Topology<T> {
     /// it should not have incoming edges, i.e. left and right reference are None, otherwise a FirstNodeHasIncomingEdges error is returned.
     /// This methods relies on Single Source Shortest and Longest (negated) Path algorithm.
     pub fn shortest_and_longest_paths(nodes:&[Node<T>]) -> Result<Option<HashMap<T, (Option<usize>, Option<usize>)>>, Box<dyn Error> > {
-        if nodes.len() > 0  {
-            if nodes[0].left != None || nodes[0].right != None
+        if !nodes.is_empty()  {
+            if nodes[0].left.is_some() || nodes[0].right.is_some()
             {
                 return Err(Box::new(TopologicalError::FirstNodeHasIncomingEdges));
             }
@@ -242,8 +242,8 @@ impl<T: Eq + Hash + PartialEq + Copy + std::fmt::Debug> Topology<T> {
             };
             let mut outgoing_edges = // instantiates a variable with the outgoing edges of all nodes.
                 if nodes[0] == topological_order[0] // This assumption relies on the sorting algorithm.
-                && topology.collitions.len() == 0
-                && topology.repeated_nodes.len() == 0
+                && topology.collitions.is_empty()
+                && topology.repeated_nodes.is_empty()
                 && topology.unique_nodes.len() == nodes.len()
                 && topology.is_consistent()
                 {
@@ -308,10 +308,10 @@ impl<T: Eq + Hash + PartialEq + Copy + std::fmt::Debug> Topology<T> {
     }
     /// Breath-First Search returns threads upto all nodes starting from the origin 
     /// marked as the first node id from which the iteration of this algorithm started from, i.e. first call arguments.
-    fn bfs_visit<'a>(topology: &Self, id: T, backtrace: &mut Vec<T>, paths_collection: &mut Vec<Vec<T>>) {
+    fn bfs_visit(topology: &Self, id: T, backtrace: &mut Vec<T>, paths_collection: &mut Vec<Vec<T>>) {
         match topology.get_outgoing_edges_by_id(id) {
             Some(edges) => {
-                if backtrace.len() == 0 {
+                if backtrace.is_empty() {
                     backtrace.push(id);
                 };
                 for node_id in edges {
@@ -330,7 +330,7 @@ impl<T: Eq + Hash + PartialEq + Copy + std::fmt::Debug> Topology<T> {
     pub fn bfs_all_paths(topology: &Self, id: T) -> Option<Vec<Vec<T>>> {
         let mut collection: Vec<Vec<T>> = Vec::new();
         let empty_vector = &mut Vec::new();
-        Topology::bfs_visit(&topology, id, empty_vector, &mut collection);
+        Topology::bfs_visit(topology, id, empty_vector, &mut collection);
         Some(collection)
     }
 }
