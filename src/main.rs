@@ -1,14 +1,14 @@
 use std::{
     env,
     fs,
-    error::Error,
 };
 use custom_dag::{
     Node,
-    topological::Topology
+    topological::Topology,
+    error::TopologicalError,
 };
 
-fn main() -> Result<(), Box<dyn Error>> {
+fn main() -> Result<(), TopologicalError> {
     let args: Vec<String> = env::args().collect();
     let file_path = &args[1];
 
