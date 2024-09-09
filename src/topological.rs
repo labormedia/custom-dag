@@ -6,7 +6,6 @@ use std::{
         HashSet,
         HashMap,
     },
-    error::Error,
     fmt,
 };
 use crate::{
@@ -141,7 +140,7 @@ impl<T: Eq + Hash + PartialEq + Copy + std::fmt::Debug> Topology<T> {
     }
     /// Tries to build a topological sort from a list of nodes.
     /// Returns a sequence of nodes that follows a topological order if it exists, otherwise it returns None.
-    pub fn sort(nodes:&[Node<T>]) -> Result<Option<Vec<Node<T>>>, Box<dyn Error> > {
+    pub fn sort(nodes:&[Node<T>]) -> Result<Option<Vec<Node<T>>>, TopologicalError > {
         let mut topology: Topology<T> = Topology::new();
         for node in nodes.iter() {
             topology.insert(*node);
@@ -200,11 +199,11 @@ impl<T: Eq + Hash + PartialEq + Copy + std::fmt::Debug> Topology<T> {
     /// Because the algorithm assumes the first node is the starting node from which to calculate distances,
     /// it should not have incoming edges, i.e. left and right reference are None, otherwise a FirstNodeHasIncomingEdges error is returned.
     /// This methods relies on Single Source Shortest and Longest (negated) Path algorithm.
-    pub fn shortest_and_longest_paths(nodes:&[Node<T>]) -> Result<Option<HashMap<T, (Option<usize>, Option<usize>)>>, Box<dyn Error> > {
+    pub fn shortest_and_longest_paths(nodes:&[Node<T>]) -> Result<Option<HashMap<T, (Option<usize>, Option<usize>)>>, TopologicalError > {
         if !nodes.is_empty()  {
             if nodes[0].left.is_some() || nodes[0].right.is_some()
             {
-                return Err(Box::new(TopologicalError::FirstNodeHasIncomingEdges));
+                return Err(TopologicalError::FirstNodeHasIncomingEdges);
             }
         } else 
         {
@@ -227,7 +226,7 @@ impl<T: Eq + Hash + PartialEq + Copy + std::fmt::Debug> Topology<T> {
                 {
                     topology.outgoing_edges
                 } else {
-                    return Err(Box::new(TopologicalError::InvalidTopologicalAssumptions));
+                    return Err(TopologicalError::InvalidTopologicalAssumptions);
                 };
             if topological_order[0] == nodes[0] {
                 assert_eq!(lengths_map.insert(nodes[0].id, (Some(0),Some(0))), Some((None, None))); // all nodes have been initiated in lengths_map previously with value (None, None)
@@ -268,7 +267,7 @@ impl<T: Eq + Hash + PartialEq + Copy + std::fmt::Debug> Topology<T> {
                                         }
                                     };
                                 } else {
-                                    return Err(Box::new(TopologicalError::InvalidTopologicalAssumptions));
+                                    return Err(TopologicalError::InvalidTopologicalAssumptions);
                                 }
                             }
                         },
