@@ -45,6 +45,8 @@ pub mod collitions;
 #[allow(unused_imports)]
 pub mod topological;
 use collitions::CollidingNode;
+pub mod error;
+use error::TopologicalError;
 
 use serde::{Serialize, Deserialize};  // Serde is called for wasm-bindgen implementation.
 
