@@ -7,6 +7,7 @@ use custom_dag::{
     Dag,
     collitions::CollidingNode,
 };
+use rand::SeedableRng;
 
 #[test]
 fn create_1_000_000_random_nodes_unconnected_dag() {
