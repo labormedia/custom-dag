@@ -7,7 +7,10 @@ use custom_dag::{
     Dag,
     collitions::CollidingNode,
 };
-use rand::SeedableRng;
+use rand::{ 
+    SeedableRng,
+    RngCore,
+};
 
 #[test]
 fn create_1_000_000_random_nodes_unconnected_dag() {
@@ -157,4 +160,17 @@ fn insert_dag_from_list() {
         assert_eq!(result, None)
     };
     assert!(dag.is_safe())
+}
+
+#[test]
+fn pseudo_random_vertices_count() {
+    let mut rng = rand_pcg::Pcg32::seed_from_u64(1);
+    let mut vertices: Vec<Node<u32>> = Vec::new();
+    let mut dag = Dag::new();
+    
+    for i in 0..rng.next_u32()/100_000 { // shrinks the integer set for reduced execution time.
+        vertices.push(Node::new(i, None, None));
+        let insert_result = dag.insert_from(&vertices);
+        assert!(dag.is_safe())
+    }
 }
