@@ -10,10 +10,12 @@ use custom_dag::{
 use rand::{ 
     SeedableRng,
     RngCore,
+    prelude::IteratorRandom,
+    Rng,
 };
 
 #[test]
-fn create_1_000_000_random_nodes_unconnected_dag() {
+fn create_1_000_000_unconnected_nodes_dag() {
     let mut dag = Dag::new();
     for i in 0..1_000_000 {
        dag.insert(Node::new(i, None, None));
@@ -163,13 +165,33 @@ fn insert_dag_from_list() {
 }
 
 #[test]
-fn pseudo_random_vertices_count() {
+fn pseudo_random_unconnected_vertices_count() {
     let mut rng = rand_pcg::Pcg32::seed_from_u64(1);
     let mut vertices: Vec<Node<u32>> = Vec::new();
     let mut dag = Dag::new();
     
     for i in 0..rng.next_u32()/100_000 { // shrinks the integer set for reduced execution time.
         vertices.push(Node::new(i, None, None));
+        let insert_result = dag.insert_from(&vertices);
+        assert!(dag.is_safe())
+    }
+}
+
+#[test]
+fn pseudo_random_connected_vertices_count() {
+    let mut rng = rand_pcg::Pcg32::seed_from_u64(1);
+    let mut vertices: Vec<Node<u32>> = Vec::new();
+    let mut dag = Dag::new();
+    
+    for i in 0..rng.next_u32()/100_000 { // shrinks the integer set for reduced execution time.
+        if i > 100 { // threshold quantity from which begin connecting with ancestors
+            let ancestor_a = rng.gen_range(0..i); // the id i is not included in the range
+            let ancestor_b = rng.gen_range(0..i);
+            vertices.push(Node::new(i, Some(ancestor_a), Some(ancestor_b)));
+        } else {
+            vertices.push(Node::new(i, None, None));
+        };
+        
         let insert_result = dag.insert_from(&vertices);
         assert!(dag.is_safe())
     }
