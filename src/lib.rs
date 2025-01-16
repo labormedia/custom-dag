@@ -9,12 +9,12 @@
 //!    Dag,
 //!    topological::Topology,
 //! };
-//! let node_a = Node::new(0,None,None);
-//! let node_b = Node::new(1,Some(0),None);
-//! let node_c = Node::new(2,None,Some(0));
-//! let node_d = Node::new(3,Some(0), Some(1));
-//! let node_e = Node::new(4,Some(2), Some(1));
-//! let node_f = Node::new(5,Some(3), Some(4));
+//! let node_a = Node::new(0,None,None,());
+//! let node_b = Node::new(1,Some(0),None,());
+//! let node_c = Node::new(2,None,Some(0),());
+//! let node_d = Node::new(3,Some(0), Some(1), ());
+//! let node_e = Node::new(4,Some(2), Some(1), ());
+//! let node_f = Node::new(5,Some(3), Some(4), ());
 //! let node_list = [node_a, node_b, node_c, node_d, node_e, node_f];
 //! let ordering = Topology::sort(&node_list).unwrap().unwrap();
 //! assert!(ordering.len() > 0);
@@ -54,33 +54,35 @@ use serde::{Serialize, Deserialize};  // Serde is called for wasm-bindgen implem
 /// Nodes makes no assumption about the structure of the graph they are inserted in.
 #[derive(Serialize, Deserialize)]
 #[derive(Debug, Clone, Hash, Copy)]
-pub struct Node<T: Eq + Hash + PartialEq + Copy> {
+pub struct Node<T: Eq + Hash + PartialEq + Copy, U: Eq + Hash + PartialEq + Copy> {
     pub id: T,
     pub left: Option<T>,
     pub right: Option<T>,
+    pub payload: U,
 }
 
-impl<T: Eq + Hash + PartialEq + Copy> PartialEq<Node<T>> for Node<T> {
-    fn eq(&self, other: &Node<T>) -> bool {
+impl<T: Eq + Hash + PartialEq + Copy, U: Eq + Hash + PartialEq + Copy> PartialEq<Node<T, U>> for Node<T, U> {
+    fn eq(&self, other: &Node<T, U>) -> bool {
         self.id == other.id
     }
 }
 
-impl<T: Eq + Hash + PartialEq + Copy> Eq for Node<T> {}
+impl<T: Eq + Hash + PartialEq + Copy, U: Eq + Hash + PartialEq + Copy> Eq for Node<T, U> {}
 
-impl<T: Eq + Hash + PartialEq + Copy> Node<T> {
+impl<T: Eq + Hash + PartialEq + Copy, U: Eq + Hash + PartialEq + Copy> Node<T, U> {
     /// The Node itself can be self-referential and makes no assumptions about the structure of the graph.
     /// Nodes define two ancestors by their id defined in left and right fields of same type as an option containing the id, i.e. `Some(id)`, of the node being referenced.
     /// If that branch does not references any node, the value can take the value `Option::<T>::None`.
-    pub fn new(id: T, left: Option<T>, right: Option<T>) -> Self {
+    pub fn new(id: T, left: Option<T>, right: Option<T>, payload: U) -> Self {
         Node {
             id,
             left,
             right,
+            payload
         }
     }
     /// Compares the equality of all fields from the base node to the reference of other node presented as the argument.
-    pub fn has_same_fields_to(&self, node: &Node<T>) -> bool {
+    pub fn has_same_fields_to(&self, node: &Node<T, U>) -> bool {
         self.id == node.id
         &&
         self.left == node.left
@@ -98,13 +100,13 @@ impl<T: Eq + Hash + PartialEq + Copy> Node<T> {
 
 /// Dag struct.
 #[derive(Debug, Clone)]
-pub struct Dag<T: Eq + Hash + PartialEq + Copy> {
-    nodes: HashMap<T, Node<T>>,
-    possible_collitions: HashMap<T, HashSet<CollidingNode<T>>>,
+pub struct Dag<T: Eq + Hash + PartialEq + Copy, U: Eq + Hash + PartialEq + Copy> {
+    nodes: HashMap<T, Node<T, U>>,
+    possible_collitions: HashMap<T, HashSet<CollidingNode<T, U>>>,
     is_safe: bool,
 }
 
-impl<T: Eq + Hash + PartialEq + Copy + Debug> Dag<T> {
+impl<T: Eq + Hash + PartialEq + Copy + Debug, U: Eq + Hash + PartialEq + Copy + Debug> Dag<T, U> {
     /// Creates a new empty Dag marked as safe.
     pub fn new() -> Self {
         Dag {
@@ -115,13 +117,13 @@ impl<T: Eq + Hash + PartialEq + Copy + Debug> Dag<T> {
     }
     /// Check the safety of a given topological order creating a new Dag from a list of nodes given as a slice references of Nodes, i.e. `&[Node<T>]`.
     /// If the generation is succesful (i.e. conforms to a topological order for the nodes list) it returns `true`, otherwise `false`.
-    pub fn check_topological_order(node_list: &[Node<T>]) -> bool {
+    pub fn check_topological_order(node_list: &[Node<T, U>]) -> bool {
         let mut topology = Self::new();
         topology.insert_from(node_list);
         topology.is_safe()
     }
     /// Inserts nodes to the dag from a list.
-    pub fn insert_from(&mut self, node_list: &[Node<T>]) -> Vec<Option<Node<T>>> {
+    pub fn insert_from(&mut self, node_list: &[Node<T, U>]) -> Vec<Option<Node<T, U>>> {
         let node_iterator = node_list.iter();
         node_iterator.map(|node| { 
             self.insert(*node)
@@ -135,7 +137,7 @@ impl<T: Eq + Hash + PartialEq + Copy + Debug> Dag<T> {
     /// If the id is not present in the dag but their references are, the node is inserted and None is returned.
     /// If the id is not present in the dag and at least one of their reference is neither, it inserts the node in the dag but marks the is_safe flag as false and returns an option with the new value added to the dag.
     /// If the id is present it does not update the dag, returns an option with the value that was present previously and accumulates the collition.
-    pub fn insert(&mut self, node: Node<T>) -> Option<Node<T>> {
+    pub fn insert(&mut self, node: Node<T, U>) -> Option<Node<T, U>> {
         if self.nodes.contains_key(&node.id) {
             match self.possible_collitions.get_mut(&node.id) {
                 Some(collition_set) => { 
@@ -168,7 +170,7 @@ impl<T: Eq + Hash + PartialEq + Copy + Debug> Dag<T> {
     }
     /// This method updates a node if it already exists.
     /// If this method is used effectively, the DAG will be marked as unsafe in its `is_safe` field as a `false` value.
-    pub fn insert_or_update(&mut self, node: Node<T>) -> Option<Node<T>> {
+    pub fn insert_or_update(&mut self, node: Node<T, U>) -> Option<Node<T, U>> {
         self.is_safe = false;
         self.nodes.insert(node.id, node)
     }
@@ -177,11 +179,11 @@ impl<T: Eq + Hash + PartialEq + Copy + Debug> Dag<T> {
         self.nodes.contains_key(id)
     }
     /// Gets a node by id. Returns `Some(id)` if present, or `None` if not.
-    pub fn get(&self, id: &T) -> Option<&Node<T>> {
+    pub fn get(&self, id: &T) -> Option<&Node<T, U>> {
         self.nodes.get(id)
     }
     /// Returns an Option with a reference of the a HashSet of possible collitions for the list of nodes inserted.
-    pub fn get_collitions(&self, id: &T) -> Option<&HashSet<CollidingNode<T>>> {
+    pub fn get_collitions(&self, id: &T) -> Option<&HashSet<CollidingNode<T, U>>> {
         self.possible_collitions.get(id)
     }
     /// Gets the value of the dag safety marker.
@@ -196,26 +198,28 @@ mod tests {
 
     #[test]
     fn create_node_without_references() {
-        let node = Node::new(0,None,None);
+        let node = Node::new(0,None,None,());
         assert_eq!(
             node, 
             Node {
                 id: 0,
                 left: None,
                 right: None,
+                payload: (),
             }
         )
     }
 
     #[test]
     fn node_is_equivalent_by_id() {
-        let node = Node::new(0,None,None);
+        let node = Node::new(0,None,None,());
         assert_eq!(
             node, 
             Node {
                 id: 0,
                 left: Some(1),
                 right: Some(2),
+                payload: (),
             }
         );
         assert_ne!(
@@ -224,19 +228,21 @@ mod tests {
                 id: 1,
                 left: None,
                 right: None,
+                payload: (),
             }
         )
     }
 
     #[test]
     fn create_node_zero_u32() {
-        let node = Node::new(0,Some(0),Some(0));
+        let node = Node::new(0,Some(0),Some(0),());
         assert_eq!(
             node, 
             Node {
                 id: 0,
                 left:Some(0),
                 right: Some(0),
+                payload: (),
             }
         )
     }
@@ -244,13 +250,14 @@ mod tests {
     #[test]
     fn create_node_zero_u64() {
         let value = 0_u64;
-        let node = Node::new(value,Some(0),Some(0));
+        let node = Node::new(value,Some(0),Some(0),());
         assert_eq!(
             node, 
             Node {
                 id: 0,
                 left:Some(0),
                 right: Some(0),
+                payload: (),
             }
         )
     }
@@ -258,13 +265,14 @@ mod tests {
     #[test]
     fn create_node_zero_usize() {
         let value = 0_usize;
-        let node = Node::new(value,Some(0),Some(0));
+        let node = Node::new(value,Some(0),Some(0),());
         assert_eq!(
             node, 
             Node {
                 id: 0,
                 left:Some(0),
                 right: Some(0),
+                payload: (),
             }
         )
     }
@@ -272,10 +280,10 @@ mod tests {
     fn has_same_fields_to() {
         type TestType = u32;
         let id: TestType = 0;
-        let node_a = Node::new(id,Some(3),Some(5));
-        let node_b = Node::new(id,Some(42),Some(43));
+        let node_a = Node::new(id,Some(3),Some(5),());
+        let node_b = Node::new(id,Some(42),Some(43),());
 
-        let node_c = Node::new(id, Some(3), Some(5));
+        let node_c = Node::new(id, Some(3), Some(5), ());
 
         assert!(node_a.has_same_fields_to(&node_a));
         assert!(node_a.has_same_fields_to(&node_c));

@@ -17,14 +17,14 @@ fn main() -> Result<(), TopologicalError> {
 
     let mut enumerated_lines = contents.lines().enumerate();
     let dag_size: usize = enumerated_lines.next().expect("Invalid file format.").1.parse()?;
-    let mut nodes_list: Vec<Node<u32>> = Vec::with_capacity(dag_size);
-    let root = Node::new(1, None, None);
+    let mut nodes_list: Vec<Node<u32, ()>> = Vec::with_capacity(dag_size);
+    let root = Node::new(1, None, None, ());
 
     nodes_list.push(root); // Adds the first node to the nodes_list
     for (i,node_data) in enumerated_lines {
         match node_data.split_once(" ") {
             Some((left, right)) => {
-                nodes_list.push(Node::new((i + 1) as u32, Some(left.parse().expect("Invalid file format.")), Some(right.parse()?)));
+                nodes_list.push(Node::new((i + 1) as u32, Some(left.parse().expect("Invalid file format.")), Some(right.parse()?), ()));
             },
             None => {}
         };

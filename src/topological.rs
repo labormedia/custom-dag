@@ -17,19 +17,19 @@ use crate::{
 
 /// Topology struct layout for analysis.
 #[derive(Debug, Clone)]
-pub struct Topology<T: Eq + Hash + PartialEq + Copy + std::fmt::Debug> {
-    all_nodes: HashSet<CollidingNode<T>>, // collection of all nodes compared by all fields
-    unique_nodes: HashMap<T, Node<T>>,
-    collitions: HashSet<CollidingNode<T>>,
-    repeated_nodes: HashMap<T, HashSet<CollidingNode<T>>>,
+pub struct Topology<T: Eq + Hash + PartialEq + Copy + std::fmt::Debug, U: Eq + Hash + PartialEq + Copy> {
+    all_nodes: HashSet<CollidingNode<T, U>>, // collection of all nodes compared by all fields
+    unique_nodes: HashMap<T, Node<T, U>>,
+    collitions: HashSet<CollidingNode<T, U>>,
+    repeated_nodes: HashMap<T, HashSet<CollidingNode<T, U>>>,
     pub outgoing_edges: HashMap<T, Vec<T>>,
 }
 
 /// Implements Topology struct.
 #[allow(dead_code)]
-impl<T: Eq + Hash + PartialEq + Copy + std::fmt::Debug> Topology<T> {
+impl<T: Eq + Hash + PartialEq + Copy + std::fmt::Debug, U: Eq + Hash + PartialEq + Copy + std::fmt::Debug> Topology<T, U> {
     /// New Topology layout.
-    fn new() -> Topology<T> {
+    fn new() -> Topology<T, U> {
         Topology {
             all_nodes: HashSet::new(),
             unique_nodes: HashMap::new(),
@@ -41,7 +41,7 @@ impl<T: Eq + Hash + PartialEq + Copy + std::fmt::Debug> Topology<T> {
     /// Inserts the node into the topology analysis.
     /// If it finds a collition, returns an Option<CollidingNode<T>> with the value of the node.
     /// otherwise it returns None if there is no collision.
-    fn insert(&mut self, node: Node<T>) -> Option<CollidingNode<T>>{
+    fn insert(&mut self, node: Node<T, U>) -> Option<CollidingNode<T, U>>{
         if self.all_nodes.insert(node.into()) { // if the node didn't existed in the collection of all nodes (compared by all fields)
             if self.get_unique_node_by_id(node.id).is_none() { // if the node didn't existed in the collection of unique nodes (compared by id)
                 assert_eq!(self.unique_nodes.insert(node.id, node), None); // Inserts node to the unique nodes collection.
@@ -65,7 +65,7 @@ impl<T: Eq + Hash + PartialEq + Copy + std::fmt::Debug> Topology<T> {
     /// If a consistent DAG topology can be constructed, 
     /// it returns and Option with the topology,
     /// otherwise it returns None.
-    pub fn from_slice(node_list:&[Node<T>]) -> Option<Self> {
+    pub fn from_slice(node_list:&[Node<T, U>]) -> Option<Self> {
         let mut topology = Topology::new();
         for node in node_list {
             topology.insert(*node);
@@ -76,16 +76,16 @@ impl<T: Eq + Hash + PartialEq + Copy + std::fmt::Debug> Topology<T> {
             None
         }
     }
-    fn collect_repeated_node(&mut self, node: Node<T>) {
+    fn collect_repeated_node(&mut self, node: Node<T, U>) {
         if let Some(repeated_nodes_set) = self.repeated_nodes.get_mut(&node.id) { // if the set of repeated nodes is already created for this node.id
             repeated_nodes_set.insert(node.into());  // insert the node into the collection of repeated nodes
         } else {  // else, if the set of repeated nodes have not been created yet for this node.id
-            let mut new_set: HashSet<CollidingNode<T>> = HashSet::new(); // creates a new set
+            let mut new_set: HashSet<CollidingNode<T, U>> = HashSet::new(); // creates a new set
             new_set.insert(node.into());  // inserts the node into the set
             assert_eq!(self.repeated_nodes.insert(node.id, new_set), None); // and inserts the set into the collection of repeated nodes for this node.id
         };
     }
-    fn collect_edges(&mut self, node: Node<T>) {
+    fn collect_edges(&mut self, node: Node<T, U>) {
         match node.left {
             None => {},
             Some(ancestor) => {
@@ -117,7 +117,7 @@ impl<T: Eq + Hash + PartialEq + Copy + std::fmt::Debug> Topology<T> {
             .map(|list| { list.len() })
             .sum()
     }
-    fn get_unique_node_by_id(&self, id:T) -> Option<Node<T>> {
+    fn get_unique_node_by_id(&self, id:T) -> Option<Node<T, U>> {
         self.unique_nodes.get(&id).copied()
     }
     /// Checks the consistency of nodes with its references, 
@@ -140,8 +140,8 @@ impl<T: Eq + Hash + PartialEq + Copy + std::fmt::Debug> Topology<T> {
     }
     /// Tries to build a topological sort from a list of nodes.
     /// Returns a sequence of nodes that follows a topological order if it exists, otherwise it returns None.
-    pub fn sort(nodes:&[Node<T>]) -> Result<Option<Vec<Node<T>>>, TopologicalError > {
-        let mut topology: Topology<T> = Topology::new();
+    pub fn sort(nodes:&[Node<T, U>]) -> Result<Option<Vec<Node<T, U>>>, TopologicalError > {
+        let mut topology: Topology<T, U> = Topology::new();
         for node in nodes.iter() {
             topology.insert(*node);
         };
@@ -159,7 +159,7 @@ impl<T: Eq + Hash + PartialEq + Copy + std::fmt::Debug> Topology<T> {
                             (node.0, node.1.in_degree())
                         })
                         .collect();
-                let mut ordering: Vec<Node<T>> = Vec::with_capacity(in_degree_map.len());
+                let mut ordering: Vec<Node<T, U>> = Vec::with_capacity(in_degree_map.len());
                 let ordering = loop {
                     let next_ordering: Vec<T> = in_degree_map
                         .clone()
@@ -199,7 +199,7 @@ impl<T: Eq + Hash + PartialEq + Copy + std::fmt::Debug> Topology<T> {
     /// Because the algorithm assumes the first node is the starting node from which to calculate distances,
     /// it should not have incoming edges, i.e. left and right reference are None, otherwise a FirstNodeHasIncomingEdges error is returned.
     /// This methods relies on Single Source Shortest and Longest (negated) Path algorithm.
-    pub fn shortest_and_longest_paths(nodes:&[Node<T>]) -> Result<Option<HashMap<T, (Option<usize>, Option<usize>)>>, TopologicalError > {
+    pub fn shortest_and_longest_paths(nodes:&[Node<T, U>]) -> Result<Option<HashMap<T, (Option<usize>, Option<usize>)>>, TopologicalError > {
         if !nodes.is_empty()  {
             if nodes[0].left.is_some() || nodes[0].right.is_some()
             {
@@ -212,7 +212,7 @@ impl<T: Eq + Hash + PartialEq + Copy + std::fmt::Debug> Topology<T> {
         let mut lengths_map: HashMap<T, (Option<usize>, Option<usize>)> = HashMap::new(); // HashMap for accumulating shortest and longest paths for each node in the list.
         if let Some(topological_order) = Self::sort(nodes)? {  // This algorithm assumes that the list nodes conforms to a topological sort
             assert!(topological_order.len() == nodes.len(), "Invalid value assumptions.");  // If there exists a topological sort, it includes all unique nodes.
-            let mut topology: Topology<T> = Topology::new();
+            let mut topology: Topology<T, U> = Topology::new();
             for node in nodes.iter() {
                 topology.insert(*node);
                 lengths_map.insert(node.id, (None, None));  // initiates lengths as None for all nodes in the list.
@@ -232,7 +232,7 @@ impl<T: Eq + Hash + PartialEq + Copy + std::fmt::Debug> Topology<T> {
                 assert_eq!(lengths_map.insert(nodes[0].id, (Some(0),Some(0))), Some((None, None))); // all nodes have been initiated in lengths_map previously with value (None, None)
             };
 
-            let mut reverse_topological_order: Vec<&Node<T>> = topological_order.iter().rev().collect(); // The topological order is reversed to iterate over the last element in the memory layout of the vector.
+            let mut reverse_topological_order: Vec<&Node<T, U>> = topological_order.iter().rev().collect(); // The topological order is reversed to iterate over the last element in the memory layout of the vector.
             let nodes_length = loop {
                 if let Some(last_node_from_reverse_topological_order) = reverse_topological_order.pop() {
                     let node_distance = &lengths_map.get(&last_node_from_reverse_topological_order.id).expect("Invalid topological assumptions.").clone(); // all nodes have been inserted to lengths_map previously at this stage.
@@ -314,18 +314,18 @@ impl<T: Eq + Hash + PartialEq + Copy + std::fmt::Debug> Topology<T> {
 
 #[test]
 fn insert_nodes_in_topology_analysis() {
-    let node_a = Node::new(0,None,None);
-    let node_b = Node::new(1,Some(0),None);
-    let node_c = Node::new(2,None,Some(0));
-    let node_d = Node::new(3,Some(0), Some(1));
-    let node_e = Node::new(4,Some(2), Some(1));
-    let node_f = Node::new(5,Some(3), Some(4));
+    let node_a = Node::new(0,None,None,());
+    let node_b = Node::new(1,Some(0),None,());
+    let node_c = Node::new(2,None,Some(0),());
+    let node_d = Node::new(3,Some(0), Some(1),());
+    let node_e = Node::new(4,Some(2), Some(1),());
+    let node_f = Node::new(5,Some(3), Some(4),());
     let mut topology = Topology::new();
     let node_list = [node_a, node_b, node_c, node_d, node_e, node_f];
     for node in node_list.into_iter() {
         assert_eq!(topology.insert(node), None); // All nodes inserted are new nodes to the topology.
     };
-    assert_eq!(topology.all_nodes.get(&Node::new(23, Some(42), Some(50)).into()), None);  // tries to take an inexistent node
+    assert_eq!(topology.all_nodes.get(&Node::new(23, Some(42), Some(50), ()).into()), None);  // tries to take an inexistent node
     for node in node_list.into_iter() {
         assert_eq!(topology.all_nodes.get(&node.into()).expect("Invalid value assumption."), &CollidingNode(node));
     };
@@ -344,7 +344,7 @@ fn insert_nodes_in_topology_analysis() {
         }
     };
     assert!(topology.is_consistent()); // Upto this stage, the topology is consistent.
-    let colliding_node = Node::new(4, None, None);
+    let colliding_node = Node::new(4, None, None, ());
     assert_eq!(topology.insert(colliding_node), Some(node_e.into())); // Tries to insert a node with the same id of an already indexed node in the topology analysis.
     assert_eq!(topology.collitions.len(), 1); // There's one collition.
     assert_eq!(topology.get_unique_node_by_id(4), Some(node_e)); // Checks that the Node in the collection of unique nodes is still the first one added by the same id.
@@ -371,8 +371,8 @@ fn insert_nodes_in_topology_analysis() {
 }
 
 fn insert_node_with_inexistent_references_is_inconsistent() {
-    let mut topology: Topology<u32> = Topology::new();
-    let node = Node::new(1, None, Some(2));
+    let mut topology: Topology<u32, ()> = Topology::new();
+    let node = Node::new(1, None, Some(2), ());
     topology.insert(node);
     assert_eq!(topology.collitions.len(), 0);
     assert_eq!(topology.repeated_nodes.len(), 0);
@@ -381,12 +381,12 @@ fn insert_node_with_inexistent_references_is_inconsistent() {
 
 #[test]
 fn topological_order() {
-    let node_a = Node::new(0,None,None);
-    let node_b = Node::new(1,Some(0),None);
-    let node_c = Node::new(2,None,Some(0));
-    let node_d = Node::new(3,Some(0), Some(1));
-    let node_e = Node::new(4,Some(2), Some(1));
-    let node_f = Node::new(5,Some(3), Some(4));
+    let node_a = Node::new(0,None,None,());
+    let node_b = Node::new(1,Some(0),None,());
+    let node_c = Node::new(2,None,Some(0),());
+    let node_d = Node::new(3,Some(0), Some(1),());
+    let node_e = Node::new(4,Some(2), Some(1),());
+    let node_f = Node::new(5,Some(3), Some(4),());
     let node_list = [node_a, node_b, node_c, node_d, node_e, node_f];
     let ordering = Topology::sort(&node_list).expect("Invalid value assumptions.").expect("Invalid value assumptions.");
     assert!(ordering.len() > 0);
@@ -399,15 +399,15 @@ fn topological_order() {
 
 #[test]
 fn another_topological_order() {
-    let node_a = Node::new(35,None,None);
-    let node_b = Node::new(42,Some(35),None);
-    let node_c = Node::new(32,None,Some(35));
-    let node_d = Node::new(51,Some(42), None);
-    let node_e = Node::new(101,Some(32), Some(51));
-    let node_f = Node::new(52,Some(51), Some(32));
-    let node_g = Node::new(50,Some(42), None);
-    let node_h = Node::new(1,Some(50), Some(52));
-    let node_i = Node::new(0,Some(50), Some(1));
+    let node_a = Node::new(35,None,None,());
+    let node_b = Node::new(42,Some(35),None,());
+    let node_c = Node::new(32,None,Some(35),());
+    let node_d = Node::new(51,Some(42), None,());
+    let node_e = Node::new(101,Some(32), Some(51),());
+    let node_f = Node::new(52,Some(51), Some(32),());
+    let node_g = Node::new(50,Some(42), None,());
+    let node_h = Node::new(1,Some(50), Some(52),());
+    let node_i = Node::new(0,Some(50), Some(1),());
     let node_list = [node_a, node_b, node_c, node_d, node_e, node_f, node_g, node_h, node_i];
     let ordering = Topology::sort(&node_list).expect("Invalid value assumptions.").expect("Invalid value assumptions.");
     // println!("Ordering : {:?}",ordering);
@@ -422,15 +422,15 @@ fn another_topological_order() {
 
 #[test]
 fn non_dag_topological_order() {
-    let node_a = Node::new(35,None,None);
-    let node_b = Node::new(42,Some(35),None);
-    let node_c = Node::new(32,None,Some(35));
-    let node_d = Node::new(51,Some(42), Some(0));
-    let node_e = Node::new(101,Some(32), Some(51));
-    let node_f = Node::new(52,Some(51), Some(32));
-    let node_g = Node::new(50,Some(42), None);
-    let node_h = Node::new(1,Some(50), Some(52));
-    let node_i = Node::new(0,Some(50), Some(1));
+    let node_a = Node::new(35,None,None,());
+    let node_b = Node::new(42,Some(35),None,());
+    let node_c = Node::new(32,None,Some(35),());
+    let node_d = Node::new(51,Some(42), Some(0), ());
+    let node_e = Node::new(101,Some(32), Some(51), ());
+    let node_f = Node::new(52,Some(51), Some(32), ());
+    let node_g = Node::new(50,Some(42), None, ());
+    let node_h = Node::new(1,Some(50), Some(52), ());
+    let node_i = Node::new(0,Some(50), Some(1), ());
     let node_list = [node_a, node_b, node_c, node_d, node_e, node_f, node_g, node_h, node_i];
     let ordering = Topology::sort(&node_list).expect("Invalid value assumptions.");
     assert_eq!(ordering, None);
@@ -438,12 +438,12 @@ fn non_dag_topological_order() {
 
 #[test]
 fn shortest_and_longest_paths() {
-    let node_prime = Node::new(1, None, None);
-    let node_a = Node::new(2, Some(1), Some(1));
-    let node_b = Node::new(3, Some(1), Some(2));
-    let node_c = Node::new(4, Some(2), Some(2));
-    let node_d = Node::new(5, Some(3), Some(6));
-    let node_e = Node::new(6, Some(3), Some(3));
+    let node_prime = Node::new(1, None, None, ());
+    let node_a = Node::new(2, Some(1), Some(1), ());
+    let node_b = Node::new(3, Some(1), Some(2), ());
+    let node_c = Node::new(4, Some(2), Some(2), ());
+    let node_d = Node::new(5, Some(3), Some(6), ());
+    let node_e = Node::new(6, Some(3), Some(3), ());
     let Ok(Some(sorted)) = Topology::sort(&[node_prime, node_a, node_b, node_c, node_d, node_e]) else { panic!("Invalid topological assumptions for this test data.") };
     let Ok(Some(shortest_and_longest)) = Topology::shortest_and_longest_paths(&sorted) else { panic!("Invalid topological assumptions for this test data.") };
     let _printable: Vec<(&u32, &(Option<usize>, Option<usize>))> = shortest_and_longest.iter().collect();
@@ -452,17 +452,17 @@ fn shortest_and_longest_paths() {
 
 #[test]
 fn another_shortest_and_longest_paths() {
-    let node_a = Node::new(35,None,None);
-    let node_b = Node::new(42,Some(35),None);
-    let node_c = Node::new(32,None,Some(35));
-    let node_d = Node::new(51,Some(42), None);
-    let node_e = Node::new(101,Some(32), Some(51));
-    let node_f = Node::new(52,Some(51), Some(101));
-    let node_g = Node::new(50,Some(42), None);
-    let node_h = Node::new(1,Some(72), Some(52));
-    let node_i = Node::new(0,Some(50), Some(1));
-    let node_j = Node::new(333,Some(50), Some(101));
-    let node_k = Node::new(72, Some(35), Some(50));
+    let node_a = Node::new(35,None,None,());
+    let node_b = Node::new(42,Some(35),None,());
+    let node_c = Node::new(32,None,Some(35),());
+    let node_d = Node::new(51,Some(42), None, ());
+    let node_e = Node::new(101,Some(32), Some(51), ());
+    let node_f = Node::new(52,Some(51), Some(101), ());
+    let node_g = Node::new(50,Some(42), None, ());
+    let node_h = Node::new(1,Some(72), Some(52), ());
+    let node_i = Node::new(0,Some(50), Some(1), ());
+    let node_j = Node::new(333,Some(50), Some(101), ());
+    let node_k = Node::new(72, Some(35), Some(50), ());
     let node_list = [node_a, node_b, node_c, node_d, node_e, node_f, node_g, node_h, node_i, node_j, node_k];
     let Ok(Some(sorted)) = Topology::sort(&node_list) else { panic!("Invalid topological assumptions for this test data.") };
     let Ok(Some(shortest_and_longest)) = Topology::shortest_and_longest_paths(&sorted) else { panic!("Invalid topological assumptions for this test data.") };
@@ -472,12 +472,12 @@ fn another_shortest_and_longest_paths() {
 
 #[test]
 fn bfs_threads() {
-    let node_prime = Node::new(1, None, None);
-    let node_a = Node::new(2, Some(1), Some(1));
-    let node_b = Node::new(3, Some(1), Some(2));
-    let node_c = Node::new(4, Some(2), Some(2));
-    let node_d = Node::new(5, Some(3), Some(6));
-    let node_e = Node::new(6, Some(3), Some(3));
+    let node_prime = Node::new(1, None, None, ());
+    let node_a = Node::new(2, Some(1), Some(1), ());
+    let node_b = Node::new(3, Some(1), Some(2), ());
+    let node_c = Node::new(4, Some(2), Some(2), ());
+    let node_d = Node::new(5, Some(3), Some(6), ());
+    let node_e = Node::new(6, Some(3), Some(3), ());
     let node_list = &[node_prime, node_a, node_b, node_c, node_d, node_e];
     let Some(topology) = Topology::from_slice(node_list) else { panic!("Invalid topological assumptions for this test data.") };
 
@@ -491,12 +491,12 @@ fn bfs_threads() {
 
 #[test]
 fn bfs_threads_no_double_edges() {
-    let node_prime = Node::new(1, None, None);
-    let node_a = Node::new(2, Some(1), None);
-    let node_b = Node::new(3, Some(1), Some(2));
-    let node_c = Node::new(4, Some(2), None);
-    let node_d = Node::new(5, Some(3), Some(6));
-    let node_e = Node::new(6, Some(3), None);
+    let node_prime = Node::new(1, None, None, ());
+    let node_a = Node::new(2, Some(1), None, ());
+    let node_b = Node::new(3, Some(1), Some(2), ());
+    let node_c = Node::new(4, Some(2), None, ());
+    let node_d = Node::new(5, Some(3), Some(6), ());
+    let node_e = Node::new(6, Some(3), None, ());
     let node_list = &[node_prime, node_a, node_b, node_c, node_d, node_e];
     let Some(topology) = Topology::from_slice(node_list) else { panic!("Invalid topological assumptions for this test data.") };
 

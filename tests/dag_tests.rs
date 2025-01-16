@@ -18,7 +18,7 @@ use rand::{
 fn create_1_000_000_unconnected_nodes_dag() {
     let mut dag = Dag::new();
     for i in 0..1_000_000 {
-       dag.insert(Node::new(i, None, None));
+       dag.insert(Node::new(i, None, None, ()));
     }
     for i in 0..1_000_000 {
         assert!(dag.contains_id(&i));
@@ -30,8 +30,8 @@ fn create_1_000_000_unconnected_nodes_dag() {
 fn insert_existing_node_id_does_not_update() {
     type TestType = u32;
     let id: TestType = 0;
-    let node_a = Node::new(id,None,None);
-    let node_b = Node::new(id,Some(42),Some(43));
+    let node_a = Node::new(id,None,None,());
+    let node_b = Node::new(id,Some(42),Some(43),());
     let mut dag = Dag::new();
     // Nodes are considered equal by id under the Node<T> type, but they can contain different field values (other than id).
     assert_eq!(node_a, node_b);
@@ -52,6 +52,7 @@ fn insert_existing_node_id_does_not_update() {
             id,
             left: node_a.left,
             right: node_a.right,
+            payload: (),
         })
     );
     assert_ne!(
@@ -63,7 +64,7 @@ fn insert_existing_node_id_does_not_update() {
         node_b.right,
     );
     // Examine the DAG's collition collection.
-    let collitions: &HashSet<CollidingNode<TestType>> = dag.get_collitions(&id).expect("Invalid value assumption.");
+    let collitions: &HashSet<CollidingNode<TestType, ()>> = dag.get_collitions(&id).expect("Invalid value assumption.");
     let colliding_node = collitions.get(&CollidingNode::from(node_b)).expect("Invalid value assumption.");
     // The colliding node corresponds to node_b.
     assert_eq!(colliding_node, &CollidingNode::from(node_b));
@@ -81,8 +82,8 @@ fn insert_existing_node_id_does_not_update() {
 fn insert_existing_node_marks_dag_unsafe() {
     type TestType = u32;
     let id: TestType = 0;
-    let node_a = Node::new(id,None,None);
-    let node_b = Node::new(id,Some(42),Some(43));
+    let node_a = Node::new(id,None,None,());
+    let node_b = Node::new(id,Some(42),Some(43),());
     let mut dag = Dag::new();
     // Inserts node_a into the DAG.
     assert_eq!(dag.insert(node_a), None);
@@ -92,7 +93,7 @@ fn insert_existing_node_marks_dag_unsafe() {
     // Trying to insert a node with the id of an already inserted node collects the collition and returns the value of the previously inserted node, which will persist in the DAG.
     assert!(dag.insert(node_b).expect("Invalid value assumption.").has_same_fields_to(&node_a));
     // Examine the DAG's collition collection.
-    let collitions: &HashSet<CollidingNode<TestType>> = dag.get_collitions(&id).expect("Invalid value assumption.");
+    let collitions: &HashSet<CollidingNode<TestType, ()>> = dag.get_collitions(&id).expect("Invalid value assumption.");
     let colliding_node = collitions.get(&CollidingNode::from(node_b)).expect("Invalid value assumption.");
     assert_eq!(colliding_node, &CollidingNode::from(node_b));
     assert_eq!(colliding_node, &CollidingNode::from(node_b));
@@ -114,7 +115,7 @@ fn insert_existing_node_marks_dag_unsafe() {
 fn insert_a_node_with_non_existent_left_reference_marks_dag_unsafe() {
     type TestType = u32;
     let id: TestType = 0;
-    let node_a = Node::new(id,Some(3),None);
+    let node_a = Node::new(id,Some(3),None,());
     let mut dag = Dag::new();
     assert_eq!(dag.insert(node_a), Some(node_a));
     assert_eq!(dag.is_safe(), false);
@@ -124,7 +125,7 @@ fn insert_a_node_with_non_existent_left_reference_marks_dag_unsafe() {
 fn insert_a_node_with_non_existent_right_reference_marks_dag_unsafe() {
     type TestType = u32;
     let id: TestType = 0;
-    let node_a = Node::new(id,None,Some(5));
+    let node_a = Node::new(id,None,Some(5),());
     let mut dag = Dag::new();
     assert_eq!(dag.insert(node_a), Some(node_a));
     assert_eq!(dag.is_safe(), false);
@@ -132,12 +133,12 @@ fn insert_a_node_with_non_existent_right_reference_marks_dag_unsafe() {
 
 #[test]
 fn insert_non_existent_nodes_with_existent_references_is_safe() {
-    let node_a = Node::new(0,None,None);
-    let node_b = Node::new(1,Some(0),None);
-    let node_c = Node::new(2,None,Some(0));
-    let node_d = Node::new(3,Some(0), Some(1));
-    let node_e = Node::new(4,Some(2), Some(1));
-    let node_f = Node::new(5,Some(3), Some(4));
+    let node_a = Node::new(0,None,None,());
+    let node_b = Node::new(1,Some(0),None,());
+    let node_c = Node::new(2,None,Some(0),());
+    let node_d = Node::new(3,Some(0), Some(1), ());
+    let node_e = Node::new(4,Some(2), Some(1), ());
+    let node_f = Node::new(5,Some(3), Some(4), ());
     let mut dag = Dag::new();
     assert_eq!(dag.insert(node_a), None);
     assert_eq!(dag.insert(node_b), None);
@@ -150,12 +151,12 @@ fn insert_non_existent_nodes_with_existent_references_is_safe() {
 
 #[test]
 fn insert_dag_from_list() {
-    let node_a = Node::new(0,None,None);
-    let node_b = Node::new(1,Some(0),None);
-    let node_c = Node::new(2,None,Some(0));
-    let node_d = Node::new(3,Some(0), Some(1));
-    let node_e = Node::new(4,Some(2), Some(1));
-    let node_f = Node::new(5,Some(3), Some(4));
+    let node_a = Node::new(0,None,None,());
+    let node_b = Node::new(1,Some(0),None,());
+    let node_c = Node::new(2,None,Some(0),());
+    let node_d = Node::new(3,Some(0), Some(1), ());
+    let node_e = Node::new(4,Some(2), Some(1), ());
+    let node_f = Node::new(5,Some(3), Some(4), ());
     let mut dag = Dag::new();
     let insert_result = dag.insert_from(&[node_a, node_b, node_c, node_d, node_e, node_f]);
     for result in insert_result {
@@ -167,11 +168,11 @@ fn insert_dag_from_list() {
 #[test]
 fn pseudo_random_unconnected_vertices_count() {
     let mut rng = rand_pcg::Pcg32::seed_from_u64(1);
-    let mut vertices: Vec<Node<u32>> = Vec::new();
+    let mut vertices: Vec<Node<u32, ()>> = Vec::new();
     let mut dag = Dag::new();
     
     for i in 0..rng.next_u32()/100_000 { // shrinks the integer set for reduced execution time.
-        vertices.push(Node::new(i, None, None));
+        vertices.push(Node::new(i, None, None, ()));
         let insert_result = dag.insert_from(&vertices);
         assert!(dag.is_safe())
     }
@@ -180,16 +181,16 @@ fn pseudo_random_unconnected_vertices_count() {
 #[test]
 fn pseudo_random_connected_vertices_count() {
     let mut rng = rand_pcg::Pcg32::seed_from_u64(1);
-    let mut vertices: Vec<Node<u32>> = Vec::new();
+    let mut vertices: Vec<Node<u32, ()>> = Vec::new();
     let mut dag = Dag::new();
     
     for i in 0..rng.next_u32()/100_000 { // shrinks the integer set for reduced execution time.
         if i > 100 { // threshold quantity from which begin connecting with ancestors
             let ancestor_a = rng.gen_range(0..i); // the id i is not included in the range
             let ancestor_b = rng.gen_range(0..i);
-            vertices.push(Node::new(i, Some(ancestor_a), Some(ancestor_b)));
+            vertices.push(Node::new(i, Some(ancestor_a), Some(ancestor_b), ()));
         } else {
-            vertices.push(Node::new(i, None, None));
+            vertices.push(Node::new(i, None, None, ()));
         };
         
         let insert_result = dag.insert_from(&vertices);
