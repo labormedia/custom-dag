@@ -197,3 +197,23 @@ fn pseudo_random_connected_vertices_count() {
         assert!(dag.is_safe())
     }
 }
+
+#[test]
+fn pseudo_random_connected_vertices_count_with_payload() {
+    let mut rng = rand_pcg::Pcg32::seed_from_u64(1);
+    let mut vertices: Vec<Node<u32, u32>> = Vec::new();
+    let mut dag = Dag::new();
+    
+    for i in 0..rng.next_u32()/100_000 { // shrinks the integer set for reduced execution time.
+        if i > 100 { // threshold quantity from which begin connecting with ancestors
+            let ancestor_a = rng.gen_range(0..i); // the id i is not included in the range
+            let ancestor_b = rng.gen_range(0..i);
+            vertices.push(Node::new(i, Some(ancestor_a), Some(ancestor_b), i));
+        } else {
+            vertices.push(Node::new(i, None, None, i));
+        };
+        
+        let insert_result = dag.insert_from(&vertices);
+        assert!(dag.is_safe())
+    }
+}
